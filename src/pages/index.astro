@@ -1,0 +1,27 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import CommandPalette from "../components/CommandPalette.astro";
+import Hero from "../components/Hero.astro";
+import Research from "../components/Research.astro";
+import Publications from "../components/Publications.astro";
+import News from "../components/News.astro";
+import Contact from "../components/Contact.astro";
+import Footer from "../components/Footer.astro";
+import EmojiDock from "../components/EmojiDock.astro";
+---
+
+<Base path="/">
+  <span id="top" aria-hidden="true"></span>
+  <Nav />
+  <main id="main">
+    <Hero />
+    <Research />
+    <Publications />
+    <News />
+    <Contact />
+  </main>
+  <Footer />
+  <EmojiDock />
+  <CommandPalette />
+</Base>

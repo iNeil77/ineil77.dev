@@ -1,0 +1,99 @@
+---
+import { nav } from "../data/site";
+---
+
+<nav class="dock" aria-label="Section navigation" data-dock>
+  <ul>
+    {nav.map((item) => (
+      <li>
+        <a href={`#${item.id}`} data-dock-link={item.id} aria-label={item.label} title={item.label}>
+          <span aria-hidden="true">{item.emoji}</span>
+        </a>
+      </li>
+    ))}
+    <li class="sep" aria-hidden="true"></li>
+    <li>
+      <button type="button" data-open-palette class="dock-cmdk" aria-label="Open command palette" title="Command palette (⌘K)">
+        <span aria-hidden="true">⌘</span>
+      </button>
+    </li>
+  </ul>
+</nav>
+
+<style>
+  .dock {
+    position: fixed;
+    left: 50%;
+    bottom: 1.1rem;
+    transform: translateX(-50%);
+    z-index: 45;
+  }
+  .dock ul {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.3rem 0.4rem;
+    background: color-mix(in srgb, var(--bg-raised) 88%, transparent);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    box-shadow: 0 8px 30px -10px rgba(26, 26, 24, 0.25);
+  }
+  .dock a,
+  .dock-cmdk {
+    display: grid;
+    place-items: center;
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 1.05rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: background 0.18s var(--ease), transform 0.18s var(--ease);
+  }
+  .dock a { filter: saturate(0.9); }
+  .dock a:hover,
+  .dock-cmdk:hover { background: var(--wash); transform: translateY(-2px); }
+  .dock a[data-active] { background: var(--wash-strong); }
+
+  .sep { width: 1px; height: 1.4rem; background: var(--rule); margin-inline: 0.2rem; }
+  .dock-cmdk { font-family: var(--mono); font-size: 0.95rem; color: var(--accent); font-weight: 600; }
+
+  @media (max-width: 480px) {
+    .dock a, .dock-cmdk { width: 2rem; height: 2rem; font-size: 0.95rem; }
+  }
+</style>
+
+<script>
+  const links = Array.from(document.querySelectorAll<HTMLElement>("[data-dock-link]"));
+  if (links.length && "IntersectionObserver" in window) {
+    const byId = new Map(links.map((l) => [l.dataset.dockLink, l]));
+    const visible = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          const id = (e.target as HTMLElement).id;
+          if (e.isIntersecting) visible.set(id, e.intersectionRatio);
+          else visible.delete(id);
+        }
+        let best: string | null = null;
+        let bestRatio = 0;
+        for (const [id, ratio] of visible) {
+          if (ratio > bestRatio) { bestRatio = ratio; best = id; }
+        }
+        links.forEach((l) => l.removeAttribute("data-active"));
+        if (best && byId.has(best)) byId.get(best)!.setAttribute("data-active", "");
+      },
+      { rootMargin: "-45% 0px -45% 0px", threshold: [0, 0.25, 0.5, 1] }
+    );
+    links.forEach((l) => {
+      const target = document.getElementById(l.dataset.dockLink!);
+      if (target) observer.observe(target);
+    });
+  }
+</script>

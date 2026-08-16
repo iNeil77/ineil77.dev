@@ -1,0 +1,25 @@
+{
+  "name": "ineil77-dev",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Personal academic website for Indraneil Paul — ineil77.dev",
+  "scripts": {
+    "parse:cv": "node scripts/parse-cv.mjs",
+    "dev": "npm run parse:cv && astro dev",
+    "start": "npm run parse:cv && astro dev",
+    "build": "npm run parse:cv && astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.2.1",
+    "@fontsource-variable/source-code-pro": "^5.1.1",
+    "@fontsource-variable/source-sans-3": "^5.1.1",
+    "@fontsource-variable/source-serif-4": "^5.1.1",
+    "astro": "^5.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

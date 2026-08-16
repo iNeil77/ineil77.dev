@@ -1,0 +1,89 @@
+---
+import "@fontsource-variable/source-serif-4";
+import "@fontsource-variable/source-serif-4/wght-italic.css";
+import "@fontsource-variable/source-sans-3";
+import "@fontsource-variable/source-sans-3/wght-italic.css";
+import "@fontsource-variable/source-code-pro";
+import "../styles/global.css";
+import { site } from "../data/site";
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** path for canonical URL, e.g. "/" or "/cv" */
+  path?: string;
+}
+
+const {
+  title = site.name,
+  description = site.description,
+  path = "/",
+} = Astro.props;
+
+const pageTitle = title === site.name ? `${site.name} — ${site.role}` : `${title} · ${site.name}`;
+const canonical = new URL(path, site.url).href;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: site.name,
+  url: site.url,
+  email: site.email,
+  jobTitle: site.role,
+  affiliation: { "@type": "Organization", name: site.location },
+  sameAs: [
+    "https://scholar.google.com/citations?user=QxfHNlsAAAAJ&hl=en",
+    "https://github.com/iNeil77",
+    "https://huggingface.co/iNeil77",
+    "https://www.linkedin.com/in/ineil77",
+    "https://x.com/iNeil77",
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="canonical" href={canonical} />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={site.name} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL("/profile.jpg", site.url).href} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:site" content="@iNeil77" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="theme-color" content="#004225" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <slot />
+    <style>
+      .skip-link {
+        position: absolute;
+        left: 0.75rem;
+        top: -3rem;
+        z-index: 100;
+        background: var(--accent);
+        color: #fff;
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        padding: 0.5rem 0.9rem;
+        border-radius: var(--radius);
+        text-decoration: none;
+        transition: top 0.2s var(--ease);
+      }
+      .skip-link:focus { top: 0.75rem; }
+    </style>
+  </body>
+</html>

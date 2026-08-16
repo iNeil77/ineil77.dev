@@ -1,0 +1,484 @@
+// Parse the LaTeX CV (Personal_CV) into structured JSON for the /cv web page.
+//
+// Source resolution order:
+//   1. ./cv-src            (the private git submodule, used in CI + prod)
+//   2. ../Personal_CV      (sibling clone, convenient for local dev)
+//   3. CV_SRC_DIR env var  (explicit override)
+// If none is found, a minimal placeholder is written so `astro build` still runs.
+//
+// The CV uses a small, fixed set of macros from yaac-another-awesome-cv.cls:
+//   \sectionTitle{title}{icon}
+//   \begin{scholarship} \scholarshipentry{date}{desc} ...        -> "timeline"
+//   \begin{experiences} \experience{date}{head}{body}{tags} ...  -> "experience"
+//   \begin{projects}    \project{title}{meta} ...                -> "publications"
+// plus inline \textbf \texttt \textsc \emph \textcolor \href and \…Symbol.
+
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
+const OUT = path.join(ROOT, "src", "generated", "cv.json");
+
+function resolveCvDir() {
+  const candidates = [
+    process.env.CV_SRC_DIR,
+    path.join(ROOT, "cv-src"),
+    path.resolve(ROOT, "..", "Personal_CV"),
+  ].filter(Boolean);
+  for (const dir of candidates) {
+    if (dir && fs.existsSync(path.join(dir, "cv.tex"))) return dir;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Low-level LaTeX scanning helpers
+// ---------------------------------------------------------------------------
+
+function stripComments(s) {
+  return s
+    .split("\n")
+    .map((line) => {
+      let out = "";
+      let esc = false;
+      for (const c of line) {
+        if (esc) {
+          out += "\\" + c;
+          esc = false;
+          continue;
+        }
+        if (c === "\\") {
+          esc = true;
+          continue;
+        }
+        if (c === "%") break;
+        out += c;
+      }
+      if (esc) out += "\\";
+      return out;
+    })
+    .join("\n");
+}
+
+// Read a balanced {...} group; `i` must point at the opening brace.
+function readGroup(s, i) {
+  if (s[i] !== "{") return null;
+  let depth = 0;
+  for (let j = i; j < s.length; j++) {
+    const c = s[j];
+    if (c === "\\") {
+      j++;
+      continue;
+    }
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return { content: s.slice(i + 1, j), end: j + 1 };
+    }
+  }
+  return null;
+}
+
+function skipSpaces(s, i) {
+  while (i < s.length && /\s/.test(s[i])) i++;
+  return i;
+}
+
+// Skip an optional [...] argument if present.
+function skipOptional(s, i) {
+  i = skipSpaces(s, i);
+  if (s[i] !== "[") return i;
+  let depth = 0;
+  for (let j = i; j < s.length; j++) {
+    if (s[j] === "[") depth++;
+    else if (s[j] === "]") {
+      depth--;
+      if (depth === 0) return j + 1;
+    }
+  }
+  return i;
+}
+
+// Find the next `\macro` (not followed by a letter) at or after `from`.
+function indexOfMacro(s, macro, from) {
+  let idx = from;
+  while (true) {
+    const at = s.indexOf(macro, idx);
+    if (at === -1) return -1;
+    const next = s[at + macro.length];
+    if (next === undefined || !/[a-zA-Z]/.test(next)) return at;
+    idx = at + macro.length;
+  }
+}
+
+// Read `argc` brace groups starting at `i` (skipping whitespace between them).
+function readArgs(s, i, argc) {
+  const args = [];
+  let j = i;
+  for (let k = 0; k < argc; k++) {
+    j = skipSpaces(s, j);
+    if (s[j] !== "{") break;
+    const g = readGroup(s, j);
+    if (!g) break;
+    args.push(g.content);
+    j = g.end;
+  }
+  return { args, end: j };
+}
+
+function findEntries(tex, macro, argc) {
+  const token = "\\" + macro;
+  const out = [];
+  let idx = 0;
+  while (true) {
+    const at = indexOfMacro(tex, token, idx);
+    if (at === -1) break;
+    const after = at + token.length;
+    const { args, end } = readArgs(tex, after, argc);
+    out.push(args);
+    idx = end > after ? end : after + 1;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Inline LaTeX -> HTML / text
+// ---------------------------------------------------------------------------
+
+const escapeHtml = (s) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const escapeAttr = (s) => escapeHtml(s).replace(/"/g, "&quot;");
+const collapse = (s) => s.replace(/[ \t\n]+/g, " ").trim();
+const stripTags = (s) => s.replace(/<[^>]*>/g, "");
+
+const WRAP = {
+  textbf: "strong",
+  textsc: "span-sc",
+  textit: "em",
+  emph: "em",
+  texttt: "code",
+  underline: "u",
+  textrm: null,
+};
+
+// Convert a LaTeX fragment. Returns { html, links }.
+// opts.inlineLinks: when false, \href anchor text is dropped from the html but
+// the link is still collected (used to peel "resource" chips off a heading).
+function convert(fragment, opts = {}) {
+  const inlineLinks = opts.inlineLinks !== false;
+  const links = [];
+  let out = "";
+  let i = 0;
+  while (i < fragment.length) {
+    const c = fragment[i];
+
+    if (c === "\\") {
+      const m = /^\\([a-zA-Z]+)\*?/.exec(fragment.slice(i));
+      if (!m) {
+        const next = fragment[i + 1];
+        const map = { "&": "&amp;", "%": "%", _: "_", "#": "#", "{": "{", "}": "}", $: "$" };
+        if (next in map) {
+          out += map[next];
+          i += 2;
+          continue;
+        }
+        if (next === "\\") {
+          out += " ";
+          i += 2;
+          continue;
+        }
+        i += 1;
+        continue;
+      }
+      const name = m[1];
+      let j = i + m[0].length;
+
+      if (name === "href") {
+        const a1 = readGroup(fragment, skipSpaces(fragment, j));
+        if (!a1) {
+          i = j;
+          continue;
+        }
+        const a2 = readGroup(fragment, skipSpaces(fragment, a1.end));
+        if (!a2) {
+          i = a1.end;
+          continue;
+        }
+        const url = collapse(stripTags(convert(a1.content, { inlineLinks: true }).html));
+        const label = collapse(stripTags(convert(a2.content, { inlineLinks: true }).html));
+        links.push({ label, href: url });
+        if (inlineLinks && label) out += `<a href="${escapeAttr(url)}">${escapeHtml(label)}</a>`;
+        i = a2.end;
+        continue;
+      }
+
+      if (name === "textcolor") {
+        const a1 = readGroup(fragment, skipSpaces(fragment, j)); // color (drop)
+        if (!a1) {
+          i = j;
+          continue;
+        }
+        const a2 = readGroup(fragment, skipSpaces(fragment, a1.end));
+        if (!a2) {
+          i = a1.end;
+          continue;
+        }
+        const inner = convert(a2.content, opts);
+        out += inner.html;
+        links.push(...inner.links);
+        i = a2.end;
+        continue;
+      }
+
+      if (name in WRAP) {
+        const g = readGroup(fragment, skipSpaces(fragment, j));
+        if (!g) {
+          i = j;
+          continue;
+        }
+        const inner = convert(g.content, opts);
+        const tag = WRAP[name];
+        if (tag === "span-sc") out += `<span class="sc">${inner.html}</span>`;
+        else if (tag) out += `<${tag}>${inner.html}</${tag}>`;
+        else out += inner.html;
+        links.push(...inner.links);
+        i = g.end;
+        continue;
+      }
+
+      // Macros with args we drop entirely (spacing / graphics).
+      if (["hspace", "vspace", "includegraphics", "scalerel", "rule"].includes(name)) {
+        j = skipOptional(fragment, j);
+        const g = readGroup(fragment, skipSpaces(fragment, j));
+        i = g ? g.end : j;
+        continue;
+      }
+
+      // Everything else (\hfill, \null, \medskip, \enspace, \quad, \faXxx,
+      // \…Symbol, \noindent, …): drop the token, keep going.
+      i = j;
+      continue;
+    }
+
+    if (c === "{") {
+      const g = readGroup(fragment, i);
+      if (g) {
+        const inner = convert(g.content, opts);
+        out += inner.html;
+        links.push(...inner.links);
+        i = g.end;
+        continue;
+      }
+    }
+    if (c === "}") {
+      i++;
+      continue;
+    }
+    if (c === "&") {
+      out += "&amp;";
+      i++;
+      continue;
+    }
+    if (c === "<") {
+      out += "&lt;";
+      i++;
+      continue;
+    }
+    if (c === ">") {
+      out += "&gt;";
+      i++;
+      continue;
+    }
+    if (c === "~") {
+      out += " ";
+      i++;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return { html: out, links };
+}
+
+const toHtml = (s) => collapse(convert(s, { inlineLinks: true }).html);
+const toText = (s) => collapse(stripTags(convert(s, { inlineLinks: true }).html));
+// Heading html with resource links peeled off into chips.
+function headingAndLinks(s) {
+  const r = convert(s, { inlineLinks: false });
+  return { html: collapse(r.html), links: dedupeLinks(r.links) };
+}
+
+function dedupeLinks(links) {
+  const seen = new Set();
+  const out = [];
+  for (const l of links) {
+    if (!l.href) continue;
+    const key = l.href + "|" + l.label;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(l);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Section parsers
+// ---------------------------------------------------------------------------
+
+function sectionTitle(tex) {
+  const at = indexOfMacro(tex, "\\sectionTitle", 0);
+  if (at === -1) return null;
+  const { args } = readArgs(tex, at + "\\sectionTitle".length, 2);
+  return args[0] ? toText(args[0]) : null;
+}
+
+function detectType(tex) {
+  if (tex.includes("\\begin{projects}")) return "publications";
+  if (tex.includes("\\begin{experiences}")) return "experience";
+  if (tex.includes("\\begin{scholarship}")) return "timeline";
+  return "timeline";
+}
+
+function parseTimeline(tex) {
+  return findEntries(tex, "scholarshipentry", 2).map(([date, desc]) => {
+    const { html, links } = headingAndLinks(desc || "");
+    return { date: toText(date || ""), heading: html, links };
+  });
+}
+
+function parseExperience(tex) {
+  return findEntries(tex, "experience", 4).map(([date, head, body, tags]) => {
+    const bullets = parseItemize(body || "");
+    const tagList = (findEntries(tags || "", "textbf", 1) || [])
+      .map(([t]) => toText(t || ""))
+      .filter(Boolean);
+    return {
+      date: toText(date || ""),
+      heading: toHtml(head || ""),
+      bullets,
+      tags: tagList,
+    };
+  });
+}
+
+function parseItemize(body) {
+  // Grab the content between \begin{itemize} and \end{itemize} if present.
+  const begin = body.indexOf("\\begin{itemize}");
+  const end = body.indexOf("\\end{itemize}");
+  let inner = begin !== -1 && end !== -1 ? body.slice(begin + "\\begin{itemize}".length, end) : body;
+  inner = skipInlineOptional(inner);
+  return inner
+    .split("\\item")
+    .map((s) => toHtml(s))
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// remove a leading [...] optional arg (e.g. \begin{itemize}[...])
+function skipInlineOptional(s) {
+  const t = s.replace(/^\s+/, "");
+  if (t[0] !== "[") return s;
+  const end = t.indexOf("]");
+  return end === -1 ? s : t.slice(end + 1);
+}
+
+function parsePublications(tex) {
+  return findEntries(tex, "project", 2).map(([title, meta]) => {
+    const m = meta || "";
+    const parts = m.split(/\\\\/); // split on LaTeX line break \\
+    const venueLine = parts[0] || "";
+    const authorLine = parts.slice(1).join(" ");
+    const hfill = venueLine.indexOf("\\hfill");
+    const venuePart = hfill === -1 ? venueLine : venueLine.slice(0, hfill);
+    const linkPart = hfill === -1 ? "" : venueLine.slice(hfill);
+    return {
+      title: toText(title || ""),
+      venue: toHtml(venuePart),
+      authors: toHtml(authorLine),
+      links: dedupeLinks(convert(linkPart, { inlineLinks: false }).links),
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+function idFromFile(file) {
+  return file.replace(/^section_/, "").replace(/\.tex$/, "");
+}
+
+function main() {
+  const cvDir = resolveCvDir();
+  fs.mkdirSync(path.dirname(OUT), { recursive: true });
+
+  if (!cvDir) {
+    console.warn(
+      "[parse-cv] No CV source found (cv-src/ or ../Personal_CV). Writing placeholder."
+    );
+    fs.writeFileSync(
+      OUT,
+      JSON.stringify(
+        { available: false, name: "Indraneil Paul", summary: "", sections: [] },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  console.log(`[parse-cv] Reading CV from ${cvDir}`);
+  const main = stripComments(fs.readFileSync(path.join(cvDir, "cv.tex"), "utf8"));
+
+  // Name
+  let name = "Indraneil Paul";
+  const nameAt = indexOfMacro(main, "\\name", 0);
+  if (nameAt !== -1) {
+    const { args } = readArgs(main, nameAt + "\\name".length, 2);
+    if (args.length === 2) name = collapse([args[0], args[1]].map(toText).join(" "));
+  }
+
+  // Summary: text between \makecvheader and the first \vspace or \input.
+  let summary = "";
+  const hdr = main.indexOf("\\makecvheader");
+  if (hdr !== -1) {
+    const rest = main.slice(hdr + "\\makecvheader".length);
+    const stop = rest.search(/\\vspace|\\input/);
+    summary = toHtml((stop === -1 ? rest : rest.slice(0, stop)).replace(/^[}\s]+/, ""));
+  }
+
+  // Sections, in the order they are \input in cv.tex.
+  const order = [];
+  const re = /\\input\{([^}]+)\}/g;
+  let mm;
+  while ((mm = re.exec(main))) order.push(mm[1].trim());
+
+  const sections = [];
+  for (const entry of order) {
+    const file = entry.endsWith(".tex") ? entry : entry + ".tex";
+    const full = path.join(cvDir, file);
+    if (!fs.existsSync(full)) {
+      console.warn(`[parse-cv] Missing section file: ${file}`);
+      continue;
+    }
+    const tex = stripComments(fs.readFileSync(full, "utf8"));
+    const type = detectType(tex);
+    const title = sectionTitle(tex) || idFromFile(file);
+    let entries = [];
+    if (type === "publications") entries = parsePublications(tex);
+    else if (type === "experience") entries = parseExperience(tex);
+    else entries = parseTimeline(tex);
+    if (entries.length) sections.push({ id: idFromFile(file), title, type, entries });
+  }
+
+  const data = { available: true, name, summary, sections };
+  fs.writeFileSync(OUT, JSON.stringify(data, null, 2));
+  const total = sections.reduce((n, s) => n + s.entries.length, 0);
+  console.log(
+    `[parse-cv] Wrote ${OUT} — ${sections.length} sections, ${total} entries.`
+  );
+}
+
+main();

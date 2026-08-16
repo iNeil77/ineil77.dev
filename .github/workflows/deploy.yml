@@ -1,0 +1,70 @@
+name: Build & Deploy
+
+# Cloudflare Pages can't run this build itself (private CV submodule + a LuaLaTeX
+# compile), so CI does the whole thing and ships the finished dist/ with wrangler.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [cv-updated] # fired by Personal_CV when the CV changes
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CF_PAGES_PROJECT: ineil77-dev
+  TEXLIVE_IMAGE: texlive/texlive:TL2025-historic
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with private CV submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # PAT with read access to the private Personal_CV repo. Also used for
+          # the main checkout — needs `repo` scope (or read:contents fine-grained).
+          token: ${{ secrets.CV_SUBMODULE_TOKEN }}
+
+      - name: Pull latest CV into the submodule
+        run: git submodule update --remote --recursive cv-src
+
+      - name: Compile CV (LuaLaTeX, pinned TeX Live 2025)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/cv-src:/work" -w /work \
+            "$TEXLIVE_IMAGE" \
+            latexmk -lualatex -interaction=nonstopmode -halt-on-error -file-line-error cv.tex
+          test -f cv-src/cv.pdf
+
+      - name: Stage the compiled PDF
+        run: |
+          mkdir -p public/cv
+          cp cv-src/cv.pdf public/cv/indraneil-paul-cv.pdf
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site (parses CV + astro build)
+        env:
+          CV_SRC_DIR: ${{ github.workspace }}/cv-src
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ env.CF_PAGES_PROJECT }} --branch=main

@@ -1,0 +1,356 @@
+---
+import { nav, socials } from "../data/site";
+import { publications } from "../data/publications";
+
+interface Props {
+  /** when true, section anchors resolve to "/#id" (used on /cv) */
+  absolute?: boolean;
+}
+const { absolute = false } = Astro.props;
+const base = absolute ? "/" : "";
+
+type Cmd = {
+  group: string;
+  label: string;
+  hint: string;
+  href: string;
+  emoji: string;
+  keywords: string;
+  external?: boolean;
+};
+
+const goTo: Cmd[] = [
+  ...nav.map((n) => ({
+    group: "Go to",
+    label: n.label,
+    hint: "Section",
+    href: `${base}#${n.id}`,
+    emoji: n.emoji,
+    keywords: `${n.label} section`,
+  })),
+  { group: "Go to", label: "Web CV", hint: "Page", href: "/cv", emoji: "\u{1F4C4}", keywords: "cv resume curriculum vitae" },
+  {
+    group: "Go to",
+    label: "Download CV (PDF)",
+    hint: "File",
+    href: "/cv/indraneil-paul-cv.pdf",
+    emoji: "\u{2B07}\u{FE0F}",
+    keywords: "cv resume pdf download",
+    external: true,
+  },
+];
+
+const connect: Cmd[] = socials.map((s) => ({
+  group: "Connect",
+  label: s.label,
+  hint: s.handle ?? "",
+  href: s.href,
+  emoji: "\u{1F517}",
+  keywords: `${s.label} ${s.handle ?? ""}`,
+  external: !s.href.startsWith("mailto:"),
+}));
+
+const pubCmds: Cmd[] = publications.map((p) => {
+  const link =
+    p.links.find((l) => l.kind === "abstract") ??
+    p.links.find((l) => l.kind === "pdf") ??
+    p.links[0];
+  return {
+    group: "Publications",
+    label: p.title,
+    hint: `${p.venue} ${p.year}`,
+    href: link?.href ?? `${base}#publications`,
+    emoji: p.featured ? "\u{2B50}" : "\u{1F4C4}",
+    keywords: `${p.title} ${p.authors} ${p.venue} ${p.tags.join(" ")}`,
+    external: link ? /^https?:/.test(link.href) : false,
+  };
+});
+
+const commands = [...goTo, ...connect, ...pubCmds];
+const groups = ["Go to", "Connect", "Publications"];
+---
+
+<div class="palette" data-palette hidden>
+  <div class="backdrop" data-palette-close></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="search">
+      <span class="prompt" aria-hidden="true">&gt;</span>
+      <input
+        type="text"
+        placeholder="Jump to a section, paper, or profile…"
+        aria-label="Search commands"
+        data-palette-input
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <kbd class="esc">esc</kbd>
+    </div>
+    <ul class="results" data-palette-results role="listbox">
+      {groups.map((g) => (
+        <Fragment>
+          <li class="group-label" data-group={g}>{g}</li>
+          {commands
+            .filter((c) => c.group === g)
+            .map((c) => (
+              <li
+                class="cmd"
+                role="option"
+                data-cmd
+                data-href={c.href}
+                data-external={c.external ? "1" : "0"}
+                data-keywords={c.keywords.toLowerCase()}
+                data-group={g}
+              >
+                <span class="cmd-emoji" aria-hidden="true">{c.emoji}</span>
+                <span class="cmd-label">{c.label}</span>
+                <span class="cmd-hint">{c.hint}</span>
+              </li>
+            ))}
+        </Fragment>
+      ))}
+      <li class="empty" data-palette-empty hidden>No matches.</li>
+    </ul>
+    <div class="foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> open</span>
+      <span><kbd>esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .palette {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: start center;
+    padding-top: clamp(4rem, 12vh, 9rem);
+    padding-inline: 1rem;
+  }
+  .palette[hidden] { display: none; }
+
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 26, 24, 0.32);
+    backdrop-filter: blur(2px);
+    animation: fade 0.16s var(--ease);
+  }
+  .panel {
+    position: relative;
+    width: min(38rem, 100%);
+    background: var(--bg-raised);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    animation: pop 0.18s var(--ease);
+  }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(-6px) scale(0.99); } }
+
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .prompt { font-family: var(--mono); color: var(--accent); font-weight: 600; }
+  .search input {
+    flex: 1;
+    border: none;
+    background: none;
+    font-family: var(--sans);
+    font-size: 1rem;
+    color: var(--ink);
+    padding: 0;
+  }
+  .search input:focus { outline: none; }
+  .esc {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--faint);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .results { list-style: none; padding: 0.4rem; margin: 0; max-height: min(24rem, 55vh); overflow-y: auto; }
+  .group-label {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0.7rem 0.7rem 0.35rem;
+  }
+  .group-label[hidden] { display: none; }
+
+  .cmd {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    scroll-margin: 0.5rem;
+  }
+  .cmd[hidden] { display: none; }
+  .cmd-emoji { font-size: 0.95rem; width: 1.2rem; text-align: center; }
+  .cmd-label {
+    flex: 1;
+    font-size: 0.92rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cmd-hint {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .cmd[data-active] { background: var(--wash); }
+  .cmd[data-active] .cmd-hint { color: var(--accent-bright); }
+
+  .empty { padding: 1.2rem 0.7rem; color: var(--muted); font-size: 0.9rem; text-align: center; }
+  .empty[hidden] { display: none; }
+
+  .foot {
+    display: flex;
+    gap: 1.1rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--faint);
+  }
+  .foot kbd {
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+    margin-right: 0.15rem;
+  }
+
+  @media (max-width: 480px) {
+    .foot { display: none; }
+  }
+</style>
+
+<script>
+  const palette = document.querySelector<HTMLElement>("[data-palette]");
+  const input = document.querySelector<HTMLInputElement>("[data-palette-input]");
+  const results = document.querySelector<HTMLElement>("[data-palette-results]");
+  const emptyEl = document.querySelector<HTMLElement>("[data-palette-empty]");
+
+  if (palette && input && results && emptyEl) {
+    const cmds = Array.from(results.querySelectorAll<HTMLElement>("[data-cmd]"));
+    const groupLabels = Array.from(results.querySelectorAll<HTMLElement>(".group-label"));
+    let active = -1;
+
+    const visible = () => cmds.filter((c) => !c.hidden);
+
+    const setActive = (i: number) => {
+      const vis = visible();
+      if (!vis.length) { active = -1; return; }
+      active = (i + vis.length) % vis.length;
+      cmds.forEach((c) => c.removeAttribute("data-active"));
+      const el = vis[active];
+      el.setAttribute("data-active", "");
+      el.scrollIntoView({ block: "nearest" });
+    };
+
+    const filter = () => {
+      const q = input.value.trim().toLowerCase();
+      cmds.forEach((c) => {
+        const hay = (c.dataset.keywords || "") + " " + (c.textContent || "").toLowerCase();
+        c.hidden = q !== "" && !q.split(/\s+/).every((t) => hay.includes(t));
+      });
+      // Hide group labels with no visible commands.
+      groupLabels.forEach((g) => {
+        const name = g.dataset.group;
+        const any = cmds.some((c) => c.dataset.group === name && !c.hidden);
+        g.hidden = !any;
+      });
+      const vis = visible();
+      emptyEl.hidden = vis.length > 0;
+      setActive(0);
+    };
+
+    const open = () => {
+      palette.hidden = false;
+      document.documentElement.style.overflow = "hidden";
+      input.value = "";
+      filter();
+      input.focus();
+    };
+    const close = () => {
+      palette.hidden = true;
+      document.documentElement.style.overflow = "";
+    };
+    const toggle = () => (palette.hidden ? open() : close());
+
+    const activate = (el: HTMLElement) => {
+      const href = el.dataset.href || "";
+      const external = el.dataset.external === "1";
+      close();
+      if (!href) return;
+      if (external) {
+        window.open(href, "_blank", "noopener");
+      } else if (href.includes("#") && !href.endsWith(".pdf")) {
+        const id = href.slice(href.indexOf("#"));
+        // Same-page anchor: smooth-scroll; cross-page: navigate.
+        if (href.startsWith("#") || href.startsWith("/#")) {
+          const target = document.querySelector(id);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth" });
+            history.replaceState(null, "", id);
+            return;
+          }
+        }
+        window.location.href = href;
+      } else {
+        window.location.href = href;
+      }
+    };
+
+    input.addEventListener("input", filter);
+
+    document.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        toggle();
+        return;
+      }
+      if (palette.hidden) return;
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); setActive(active + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); setActive(active - 1); }
+      else if (e.key === "Enter") {
+        e.preventDefault();
+        const el = visible()[active];
+        if (el) activate(el);
+      }
+    });
+
+    results.addEventListener("mousemove", (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>("[data-cmd]");
+      if (!el || el.hasAttribute("data-active")) return;
+      const idx = visible().indexOf(el);
+      if (idx >= 0) setActive(idx);
+    });
+    results.addEventListener("click", (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>("[data-cmd]");
+      if (el) activate(el);
+    });
+
+    document.querySelectorAll("[data-open-palette]").forEach((btn) =>
+      btn.addEventListener("click", open)
+    );
+    document.querySelectorAll("[data-palette-close]").forEach((el) =>
+      el.addEventListener("click", close)
+    );
+  }
+</script>

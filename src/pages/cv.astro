@@ -1,0 +1,197 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import CommandPalette from "../components/CommandPalette.astro";
+import { site } from "../data/site";
+import cv from "../generated/cv.json";
+
+const pdfHref = "/cv/indraneil-paul-cv.pdf";
+---
+
+<Base title="Curriculum Vitae" path="/cv" description={`Curriculum vitae of ${site.name} — ${site.role}.`}>
+  <Nav absolute />
+  <main id="main" class="cv">
+    <header class="cv-head">
+      <div class="cv-head-top">
+        <p class="eyebrow"><span class="em">📄</span>Curriculum Vitae</p>
+        <div class="cv-actions">
+          <a class="btn primary" href={pdfHref} target="_blank" rel="noopener">Download PDF</a>
+          <button type="button" class="btn" data-print>Print</button>
+        </div>
+      </div>
+      <h1 class="cv-name">{cv.name}</h1>
+      <p class="cv-role">{site.role} · {site.location}</p>
+      {cv.summary && <p class="prose cv-summary" set:html={cv.summary} />}
+    </header>
+
+    {!cv.available && (
+      <p class="cv-fallback">
+        The rendered CV is being generated. Meanwhile, the
+        <a href={pdfHref}>PDF version</a> is available.
+      </p>
+    )}
+
+    {cv.sections.map((section) => (
+      <section class="cv-section" id={`cv-${section.id}`}>
+        <h2 class="cv-section-title">{section.title}</h2>
+
+        {section.type === "publications" ? (
+          <ol class="cv-pubs">
+            {section.entries.map((e: any) => (
+              <li class="cv-pub">
+                <p class="cv-pub-title">{e.title}</p>
+                {e.authors && <p class="cv-pub-authors" set:html={e.authors} />}
+                <div class="cv-pub-foot">
+                  {e.venue && <span class="cv-venue" set:html={e.venue} />}
+                  {e.links?.length > 0 && (
+                    <span class="cv-links">
+                      {e.links.map((l: any) => (
+                        <a class="chip" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                      ))}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <ul class="cv-rows">
+            {section.entries.map((e: any) => (
+              <li class="cv-row">
+                <div class="cv-when mono">{e.date}</div>
+                <div class="cv-what">
+                  <p class="cv-heading" set:html={e.heading} />
+                  {e.bullets?.length > 0 && (
+                    <ul class="cv-bullets">
+                      {e.bullets.map((b: string) => (
+                        <li set:html={b} />
+                      ))}
+                    </ul>
+                  )}
+                  {(e.tags?.length > 0 || e.links?.length > 0) && (
+                    <div class="cv-meta">
+                      {e.links?.map((l: any) => (
+                        <a class="chip" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                      ))}
+                      {e.tags?.map((t: string) => (
+                        <span class="cv-tag mono">{t}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    ))}
+  </main>
+  <CommandPalette absolute />
+</Base>
+
+<style>
+  .cv { max-width: 48rem; margin-inline: auto; padding: clamp(2.5rem, 6vw, 4rem) var(--gutter) 5rem; }
+
+  .cv-head { border-bottom: 1px solid var(--rule); padding-bottom: 1.75rem; margin-bottom: 2.25rem; }
+  .cv-head-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .cv-head .eyebrow { margin-bottom: 0; }
+  .cv-head .eyebrow::after { display: none; }
+
+  .cv-actions { display: flex; gap: 0.5rem; }
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    text-decoration: none;
+    padding: 0.5rem 0.85rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--rule-strong);
+    color: var(--ink);
+    background: none;
+    cursor: pointer;
+    transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease);
+  }
+  .btn:hover { border-color: var(--accent); background: var(--wash); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent-hover); color: #fff; }
+
+  .cv-name { font-size: clamp(2rem, 5vw, 2.6rem); margin-top: 1.4rem; letter-spacing: -0.02em; }
+  .cv-role { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; }
+  .cv-summary { margin-top: 1.25rem; max-width: 42rem; color: var(--ink); }
+  .cv-fallback { color: var(--muted); }
+  .cv-fallback a { color: var(--accent-bright); }
+
+  .cv-section { margin-top: 2.75rem; }
+  .cv-section-title {
+    font-size: 1.3rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 1.4rem;
+    display: inline-block;
+  }
+
+  /* Timeline / experience rows */
+  .cv-rows, .cv-pubs { list-style: none; margin: 0; padding: 0; }
+  .cv-row {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    gap: 1.25rem;
+    padding-block: 0.85rem;
+  }
+  .cv-row + .cv-row { border-top: 1px solid var(--rule); }
+  .cv-when { font-size: 0.78rem; color: var(--faint); padding-top: 0.15rem; white-space: nowrap; }
+  .cv-heading { font-weight: 600; font-size: 0.98rem; }
+  .cv-heading :global(a) { color: var(--accent-bright); text-decoration: none; border-bottom: 1px solid var(--wash-strong); }
+  .cv-heading :global(a:hover) { border-color: var(--accent); }
+
+  .cv-bullets { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--muted); }
+  .cv-bullets li { margin-block: 0.25rem; font-size: 0.92rem; }
+  .cv-bullets :global(a) { color: var(--accent-bright); text-decoration: none; border-bottom: 1px solid var(--wash-strong); }
+  .cv-bullets :global(code) { font-family: var(--mono); font-size: 0.85em; background: var(--wash); padding: 0.05em 0.3em; border-radius: 3px; }
+
+  .cv-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem; align-items: center; }
+  .cv-tag {
+    font-size: 0.68rem;
+    color: var(--muted);
+    background: var(--wash);
+    border: 1px solid var(--wash-strong);
+    border-radius: 4px;
+    padding: 0.12rem 0.45rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* Publications */
+  .cv-pub { padding-block: 0.9rem; }
+  .cv-pub + .cv-pub { border-top: 1px solid var(--rule); }
+  .cv-pub-title { font-weight: 600; font-size: 0.98rem; line-height: 1.35; }
+  .cv-pub-authors { font-size: 0.9rem; color: var(--muted); margin-top: 0.3rem; }
+  .cv-pub-authors :global(strong) { color: var(--ink); }
+  .cv-pub-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.5rem; }
+  .cv-venue { font-family: var(--mono); font-size: 0.74rem; color: var(--ink); }
+  .cv-venue :global(strong) { font-weight: 600; }
+  .cv-venue :global(a) { color: var(--accent-bright); text-decoration: none; }
+  .cv-links { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+
+  @media (max-width: 560px) {
+    .cv-row { grid-template-columns: 1fr; gap: 0.3rem; }
+    .cv-when { padding-top: 0; }
+  }
+
+  /* Print: drop chrome, ink on white, tighten. */
+  @media print {
+    :global(.nav), :global(.dock), :global(.palette), .cv-actions { display: none !important; }
+    .cv { padding: 0; max-width: none; }
+    .cv-section-title { border-bottom-color: #000; color: #000; }
+    :global(a) { color: #000 !important; }
+    .chip { display: none; }
+  }
+</style>
+
+<script>
+  document.querySelector("[data-print]")?.addEventListener("click", () => window.print());
+</script>

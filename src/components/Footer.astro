@@ -1,0 +1,40 @@
+---
+import { site } from "../data/site";
+const year = 2026;
+---
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <p class="colophon">
+      © {year} {site.name}. Built with
+      <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>,
+      typeset in Source Serif &amp; Source Code Pro, deployed on
+      <a href="https://pages.cloudflare.com" target="_blank" rel="noopener">Cloudflare Pages</a>.
+    </p>
+    <a class="src" href="https://github.com/iNeil77/ineil77.dev" target="_blank" rel="noopener">
+      Source
+    </a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--rule);
+    padding-block: 2.5rem 5.5rem;
+    margin-top: var(--section-gap);
+  }
+  .footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    color: var(--faint);
+  }
+  .colophon { max-width: 42rem; line-height: 1.6; }
+  .footer a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--rule-strong); }
+  .footer a:hover { color: var(--accent); border-color: var(--accent); }
+  .src { white-space: nowrap; }
+</style>

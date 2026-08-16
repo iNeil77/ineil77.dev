@@ -1,0 +1,79 @@
+---
+import { researchThreads } from "../data/site";
+import { publications } from "../data/publications";
+
+// Resolve each thread's work ids into { title, href } for quick links.
+const byId = new Map(publications.map((p) => [p.id, p]));
+function workLink(id: string) {
+  const p = byId.get(id);
+  if (!p) return null;
+  const link =
+    p.links.find((l) => l.kind === "abstract") ??
+    p.links.find((l) => l.kind === "pdf") ??
+    p.links[0];
+  // A short display name from the title (text before the first colon).
+  const short = p.title.split(":")[0];
+  return { short, href: link?.href ?? "#publications" };
+}
+---
+
+<section id="research" class="section" aria-label="Research">
+  <div class="wrap">
+    <p class="eyebrow"><span class="em">🔬</span>Research</p>
+    <h2 class="section-title">Three threads I keep pulling on.</h2>
+
+    <ol class="threads">
+      {researchThreads.map((t) => (
+        <li class="thread">
+          <span class="thread-no" aria-hidden="true">{t.no}</span>
+          <div class="thread-body">
+            <h3 class="thread-title">{t.title}</h3>
+            <p class="thread-blurb">{t.blurb}</p>
+            <div class="thread-work">
+              {t.work.map((id) => {
+                const w = workLink(id);
+                return w ? (
+                  <a class="chip" href={w.href} target="_blank" rel="noopener">{w.short}</a>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .threads {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    counter-reset: none;
+  }
+  .thread {
+    display: grid;
+    grid-template-columns: 3.25rem 1fr;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+    padding-block: 1.75rem;
+    border-top: 1px solid var(--rule);
+  }
+  .thread:last-child { border-bottom: 1px solid var(--rule); }
+
+  .thread-no {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent);
+    padding-top: 0.2rem;
+    letter-spacing: -0.02em;
+  }
+  .thread-title { font-size: 1.2rem; }
+  .thread-blurb { color: var(--muted); margin-top: 0.5rem; max-width: 40rem; }
+  .thread-work { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.9rem; }
+
+  @media (max-width: 520px) {
+    .thread { grid-template-columns: 1fr; gap: 0.35rem; }
+    .thread-no { padding-top: 0; }
+  }
+</style>

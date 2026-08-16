@@ -1,0 +1,179 @@
+---
+import { publications, pubCategories } from "../data/publications";
+import { highlightAuthor } from "../utils/text";
+
+const linkLabels: Record<string, string> = {
+  abstract: "Abstract",
+  pdf: "PDF",
+  slides: "Slides",
+  code: "Code",
+  demo: "Demo",
+  project: "Project",
+};
+
+function titleHref(p: (typeof publications)[number]) {
+  const order = ["abstract", "pdf", "project", "demo", "slides"];
+  for (const kind of order) {
+    const l = p.links.find((x) => x.kind === kind);
+    if (l) return l.href;
+  }
+  return p.links[0]?.href;
+}
+---
+
+<section id="publications" class="section" aria-label="Publications">
+  <div class="wrap">
+    <p class="eyebrow"><span class="em">📚</span>Publications</p>
+    <h2 class="section-title">Selected publications.</h2>
+
+    <div class="filters" role="group" aria-label="Filter publications by topic" data-filters>
+      <button type="button" class="chip filter" data-filter="all" data-active aria-pressed="true">
+        All
+      </button>
+      {pubCategories.map((c) => (
+        <button type="button" class="chip filter" data-filter={c} aria-pressed="false">
+          {c}
+        </button>
+      ))}
+    </div>
+
+    <ol class="pubs" data-pubs>
+      {publications.map((p) => (
+        <li
+          class="pub"
+          data-pub
+          data-tags={p.tags.join("|")}
+        >
+          <div class="pub-year mono">{p.year}</div>
+          <div class="pub-main">
+            <h3 class="pub-title">
+              {titleHref(p) ? (
+                <a href={titleHref(p)} target="_blank" rel="noopener">{p.title}</a>
+              ) : (
+                p.title
+              )}
+              {p.featured && <span class="star" title="Selected" aria-label="Selected">★</span>}
+            </h3>
+            <p class="pub-authors" set:html={highlightAuthor(p.authors)} />
+            <div class="pub-meta">
+              <span class="venue">{p.venue}</span>
+              {p.status && <span class="badge">{p.status}</span>}
+              {p.award && <span class="badge award">{p.award}</span>}
+            </div>
+            <div class="pub-links">
+              {p.links.map((l) => (
+                <a class="chip" href={l.href} target="_blank" rel="noopener">
+                  {linkLabels[l.kind] ?? l.kind}
+                </a>
+              ))}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+    <p class="pubs-empty" data-pubs-empty hidden>No publications in this topic.</p>
+  </div>
+</section>
+
+<style>
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 2rem;
+  }
+  .filter { cursor: pointer; font-weight: 500; }
+  .filter[data-active] {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .pubs { list-style: none; margin: 0; padding: 0; }
+  .pub {
+    display: grid;
+    grid-template-columns: 3.25rem 1fr;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+    padding-block: 1.5rem;
+    border-top: 1px solid var(--rule);
+  }
+  .pub:last-of-type { border-bottom: 1px solid var(--rule); }
+  .pub[hidden] { display: none; }
+
+  .pub-year { color: var(--faint); font-size: 0.85rem; padding-top: 0.25rem; }
+
+  .pub-title {
+    font-size: 1.08rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  .pub-title a {
+    text-decoration: none;
+    background-image: linear-gradient(var(--accent), var(--accent));
+    background-size: 0% 1.5px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 0.25s var(--ease), color 0.2s var(--ease);
+  }
+  .pub-title a:hover { color: var(--accent); background-size: 100% 1.5px; }
+  .star { color: var(--accent); font-size: 0.8em; margin-left: 0.3rem; vertical-align: 0.1em; }
+
+  .pub-authors { font-size: 0.92rem; color: var(--muted); margin-top: 0.35rem; }
+  .pub-authors :global(strong) { color: var(--ink); font-weight: 600; }
+
+  .pub-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .venue { font-family: var(--mono); font-size: 0.76rem; color: var(--ink); }
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--rule-strong);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+  }
+  .badge.award { color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }
+
+  .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+  .pubs-empty { color: var(--muted); padding-top: 1.5rem; }
+
+  @media (max-width: 520px) {
+    .pub { grid-template-columns: 1fr; gap: 0.25rem; }
+    .pub-year { padding-top: 0; }
+  }
+</style>
+
+<script>
+  const group = document.querySelector<HTMLElement>("[data-filters]");
+  const pubs = Array.from(document.querySelectorAll<HTMLElement>("[data-pub]"));
+  const empty = document.querySelector<HTMLElement>("[data-pubs-empty]");
+
+  if (group && pubs.length) {
+    const buttons = Array.from(group.querySelectorAll<HTMLButtonElement>(".filter"));
+    group.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".filter");
+      if (!btn) return;
+      const filter = btn.dataset.filter || "all";
+      buttons.forEach((b) => {
+        const on = b === btn;
+        b.toggleAttribute("data-active", on);
+        b.setAttribute("aria-pressed", String(on));
+      });
+      let shown = 0;
+      pubs.forEach((p) => {
+        const tags = (p.dataset.tags || "").split("|");
+        const match = filter === "all" || tags.includes(filter);
+        p.hidden = !match;
+        if (match) shown++;
+      });
+      if (empty) empty.hidden = shown > 0;
+    });
+  }
+</script>

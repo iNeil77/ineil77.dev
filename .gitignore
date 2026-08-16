@@ -1,0 +1,21 @@
+# build output
+dist/
+.astro/
+
+# dependencies
+node_modules/
+
+# generated at build time from the CV LaTeX sources (scripts/parse-cv.mjs)
+src/generated/cv.json
+
+# generated CV PDF copied in by CI from the LaTeX build
+public/cv/*.pdf
+
+# env / local
+.env
+.env.production
+.dev.vars
+
+# OS / editor
+.DS_Store
+*.log
