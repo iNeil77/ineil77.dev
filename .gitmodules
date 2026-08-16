@@ -1,0 +1,4 @@
+[submodule "cv-src"]
+	path = cv-src
+	url = https://github.com/iNeil77/Personal_CV.git
+	branch = main
