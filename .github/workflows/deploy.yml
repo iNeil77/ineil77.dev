@@ -24,13 +24,27 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      # Mint a short-lived (1h) installation token from the CI GitHub App
+      # instead of storing a long-lived PAT. Scoped to just these two repos;
+      # auto-revoked when the job ends.
+      - name: Mint GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            ineil77.dev
+            Personal_CV
+
       - name: Checkout (with private CV submodule)
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          # PAT with read access to the private Personal_CV repo. Also used for
-          # the main checkout — needs `repo` scope (or read:contents fine-grained).
-          token: ${{ secrets.CV_SUBMODULE_TOKEN }}
+          # App token grants read on both repos, so it fetches this repo and
+          # the private Personal_CV submodule in one go.
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Pull latest CV into the submodule
         run: git submodule update --remote --recursive cv-src
@@ -66,5 +80,6 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Account ID is an identifier, not a secret — stored as a repo variable.
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=${{ env.CF_PAGES_PROJECT }} --branch=main

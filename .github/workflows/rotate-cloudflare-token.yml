@@ -1,0 +1,68 @@
+name: Rotate Cloudflare token
+
+# The Cloudflare deploy token can't use OIDC federation, so rather than leave it
+# static we roll its value on a schedule. Cloudflare keeps the same token ID and
+# permissions and returns a fresh secret, which we write back over
+# CLOUDFLARE_API_TOKEN. The CI GitHub App mints the short-lived token used to
+# update the secret.
+#
+# The token must be created with two permission groups:
+#   - Account  → Cloudflare Pages → Edit   (what wrangler uses to deploy)
+#   - User     → API Tokens       → Edit   (lets it roll its own value)
+on:
+  schedule:
+    - cron: "0 6 1 * *" # 06:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+concurrency:
+  group: rotate-cf-token
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rotate:
+    # Skip scheduled runs until the CI App is configured (avoids noisy failures).
+    if: ${{ vars.CI_APP_ID != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Mint GitHub App token (Secrets: write)"
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CI_APP_ID }}
+          private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ineil77.dev
+
+      - name: Roll the token and update the secret
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4"
+
+          # The token authenticates as itself; verify returns its own ID.
+          id="$(curl -fsS "$api/user/tokens/verify" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result.id')"
+          if [ -z "$id" ] || [ "$id" = "null" ]; then
+            echo "::error::Could not resolve the Cloudflare token ID. Is the token valid and does it have 'User → API Tokens → Edit'?"
+            exit 1
+          fi
+
+          # Roll returns a brand-new secret value for the same token ID; the old
+          # value is invalidated at this point, so we must persist the new one.
+          new="$(curl -fsS -X PUT "$api/user/tokens/$id/value" \
+            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result')"
+          if [ -z "$new" ] || [ "$new" = "null" ]; then
+            echo "::error::Cloudflare did not return a rolled token value."
+            exit 1
+          fi
+          echo "::add-mask::$new"
+
+          # Persist it; the next deploy and the next roll read this back.
+          printf '%s' "$new" | gh secret set CLOUDFLARE_API_TOKEN \
+            --repo "${{ github.repository }}"
+          echo "Cloudflare token rolled; CLOUDFLARE_API_TOKEN updated."

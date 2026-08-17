@@ -60,13 +60,33 @@ so **GitHub Actions** does everything and ships `dist/` with `wrangler`
 `workflow_dispatch`, and on a `cv-updated` repository dispatch fired by
 `Personal_CV` when the CV changes.
 
-### Required secrets (this repo)
+### Credentials
 
-| Secret | Purpose |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare Pages: Edit permission |
-| `CLOUDFLARE_ACCOUNT_ID` | Target Cloudflare account |
-| `CV_SUBMODULE_TOKEN` | PAT with read access to the private `Personal_CV` |
+CI avoids long-lived personal access tokens. Instead a single **GitHub App**
+(installed on both `ineil77.dev` and `Personal_CV`) mints a short-lived,
+least-privilege token at the start of each run — used to check out the private
+CV submodule, to fire the `cv-updated` dispatch, and to write the rotated
+Cloudflare secret. Its permissions: **Contents: Read & write** and
+**Secrets: Read & write**.
 
-`Personal_CV` needs a `WEBSITE_DISPATCH_TOKEN` secret (PAT that can dispatch to
-this repo) for CV changes to auto-redeploy the site.
+Set these in **both** repos:
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Variable | `CI_APP_ID` | The GitHub App's numeric App ID |
+| Secret | `CI_APP_PRIVATE_KEY` | A private key (`.pem`) generated for the App |
+
+This repo (`ineil77.dev`) also needs:
+
+| Kind | Name | Value |
+| --- | --- | --- |
+| Secret | `CLOUDFLARE_API_TOKEN` | Scoped **Account → Cloudflare Pages → Edit** *and* **User → API Tokens → Edit** (so it can roll itself) |
+| Variable | `CLOUDFLARE_ACCOUNT_ID` | Target account ID (an identifier, not a secret) |
+
+**Rotation.** The App private key is the only long-lived credential; rotate it
+anytime in the App settings (add a new key → update `CI_APP_PRIVATE_KEY` → delete
+the old key) with zero downtime. The Cloudflare token rotates itself monthly via
+`.github/workflows/rotate-cloudflare-token.yml` — it rolls its own value and
+writes the new one back over `CLOUDFLARE_API_TOKEN`. If a roll ever fails
+mid-run (Cloudflare invalidates the old value before the new one is stored),
+re-create the Pages token by hand and update the secret once.
