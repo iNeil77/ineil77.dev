@@ -28,7 +28,8 @@ import { inline, monthYear } from "../utils/text";
     align-items: baseline;
   }
   .item + .item { border-top: 1px solid var(--rule); }
-  .date { font-size: 0.78rem; color: var(--faint); white-space: nowrap; }
+  /* Bold + darker, matching the CV page's left date column. */
+  .date { font-size: 0.78rem; font-weight: 700; color: var(--ink); white-space: nowrap; }
   .text { font-size: 0.98rem; }
 
   @media (max-width: 520px) {

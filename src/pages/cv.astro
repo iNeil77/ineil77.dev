@@ -118,10 +118,9 @@ const ICON_KINDS = new Set(["abstract", "pdf", "slides", "code", "demo", "projec
     gap: 1rem;
     flex-wrap: wrap;
   }
-  /* Keep this page-header eyebrow at its original small size; only the
-     homepage section eyebrows are enlarged. */
-  .cv-head .eyebrow { margin-bottom: 0; font-size: 0.72rem; letter-spacing: 0.18em; gap: 0.6rem; }
-  .cv-head .eyebrow .em { font-size: 0.95rem; }
+  /* Match the homepage section eyebrows in size; drop the trailing rule and
+     bottom margin so it sits centred beside the action buttons. */
+  .cv-head .eyebrow { margin-bottom: 0; }
   .cv-head .eyebrow::after { display: none; }
 
   .cv-actions { display: flex; gap: 0.5rem; }
@@ -142,8 +141,9 @@ const ICON_KINDS = new Set(["abstract", "pdf", "slides", "code", "demo", "projec
   .btn.primary:hover { background: var(--accent-hover); color: #fff; }
 
   .cv-name { font-size: clamp(2rem, 5vw, 2.6rem); margin-top: 1.4rem; letter-spacing: -0.02em; }
-  .cv-role { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); margin-top: 0.5rem; }
-  .cv-summary { margin-top: 1.25rem; max-width: 42rem; color: var(--ink); }
+  .cv-role { font-family: var(--mono); font-size: 0.82rem; font-weight: 700; color: var(--muted); margin-top: 0.5rem; }
+  /* Full section width, justified like the other CV blocks. */
+  .cv-summary { margin-top: 1.25rem; color: var(--ink); text-align: justify; }
   .cv-fallback { color: var(--muted); }
   .cv-fallback a { color: var(--accent-bright); }
 
