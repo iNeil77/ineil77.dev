@@ -70,7 +70,10 @@ const base = absolute ? "/" : "";
     place-items: center;
     border-radius: var(--radius);
   }
-  .brand-name { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; letter-spacing: -0.01em; }
+  /* line-height: 1 collapses the serif's tall line box so the name's glyphs
+     sit on the same optical centre as the square mark (flex align-items: center
+     centres the boxes, not the ink). */
+  .brand-name { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; line-height: 1; letter-spacing: -0.01em; }
 
   .links {
     display: flex;

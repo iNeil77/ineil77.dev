@@ -44,13 +44,13 @@ export const nav: NavItem[] = [
 
 export const socials: SocialLink[] = [
   {
-    label: "Google Scholar",
+    label: "Scholar",
     href: "https://scholar.google.com/citations?user=QxfHNlsAAAAJ&hl=en",
-    handle: "Scholar",
+    handle: "Google Scholar",
   },
   { label: "GitHub", href: "https://github.com/iNeil77", handle: "iNeil77" },
   {
-    label: "Hugging Face",
+    label: "HuggingFace",
     href: "https://huggingface.co/iNeil77",
     handle: "iNeil77",
   },
@@ -66,9 +66,9 @@ export const socials: SocialLink[] = [
 // Prose bio. Each string is a paragraph. Inline links use the {label|href}
 // mini-syntax expanded by the Hero component.
 export const bio: string[] = [
-  "I'm a PhD researcher at the {UKP Lab|https://www.informatik.tu-darmstadt.de/ukp}, TU Darmstadt, advised by {Iryna Gurevych|https://www.informatik.tu-darmstadt.de/ukp/ukp_home/head_ukp/index.en.jsp} and {Goran Glavaš|https://sites.google.com/view/goranglavas}. I work on the mid- and post-training of language models, with an emphasis on agentic coding and tool use.",
-  "My longer-term aim is to extend LMs to long-horizon operation — computer use, recursive workflows — by improving how they reason, offload computation, and learn from environment feedback. Alongside this, I study preference learning and verifiers that push code models along non-functional axes like security and efficiency, and I care about the whole pre-training stack: data curation, context-length extension, modularity, and reinforcement learning.",
-  "Previously I was an Applied Scientist at Amazon, and before that a dual-degree student at {IIIT Hyderabad|https://iiit.ac.in}. I've contributed to several open code-LM releases, including {StarCoder2|https://huggingface.co/blog/starcoder2} and {BigCodeBench|https://bigcode-bench.github.io}.",
+  "I'm a PhD researcher at the {UKP Lab|https://www.informatik.tu-darmstadt.de/ukp}, **TU Darmstadt**, advised by {Iryna Gurevych|https://www.informatik.tu-darmstadt.de/ukp/ukp_home/head_ukp/index.en.jsp} and {Goran Glavaš|https://sites.google.com/view/goranglavas}. I work on the **mid- and post-training** of language models, with an emphasis on **agentic coding and tool use**.",
+  "My longer-term aim is to extend LMs to **long-horizon operation** — computer use, recursive workflows — by improving how they reason, offload computation, and learn from environment feedback. Alongside this, I study **preference learning and verifiers** that push code models along non-functional axes like **security and efficiency**, and I care about the whole pre-training stack: data curation, context-length extension, modularity, and reinforcement learning.",
+  "Previously I was an **Applied Scientist** at Amazon, and before that a dual-degree student at {IIIT Hyderabad|https://iiit.ac.in}. I've contributed to several open code-LM releases, including {StarCoder2|https://huggingface.co/blog/starcoder2} and {BigCodeBench|https://bigcode-bench.github.io}.",
 ];
 
 // Location shown under the profile photo.

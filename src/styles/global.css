@@ -62,16 +62,18 @@ a { color: inherit; }
 h1, h2, h3, h4 { font-family: var(--serif); font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; }
 p { text-wrap: pretty; }
 
+/* Underlined content links: bold + underlined, in the CV's British racing green. */
 .prose a {
-  color: var(--accent-bright);
+  color: var(--accent);
+  font-weight: 700;
   text-decoration: none;
-  background-image: linear-gradient(var(--accent-bright), var(--accent-bright));
+  background-image: linear-gradient(var(--accent), var(--accent));
   background-size: 100% 1px;
   background-repeat: no-repeat;
   background-position: 0 1.15em;
   transition: background-size 0.2s var(--ease), color 0.2s var(--ease);
 }
-.prose a:hover { color: var(--accent); background-size: 100% 2px; }
+.prose a:hover { background-size: 100% 2px; }
 
 /* Layout primitives ------------------------------------------------------- */
 .wrap { width: 100%; max-width: var(--measure); margin-inline: auto; padding-inline: var(--gutter); }
@@ -86,7 +88,11 @@ p { text-wrap: pretty; }
   font-size: clamp(1.05rem, 0.72rem + 1.7vw, 1.8rem);
   font-weight: 600;
   letter-spacing: 0.1em;
-  text-transform: uppercase;
+  /* Small caps (like the CV's \textsc section titles) rather than full caps.
+     font-synthesis re-enables synthesized small caps, which the body's
+     font-synthesis: none would otherwise suppress on fonts lacking smcp. */
+  font-variant-caps: small-caps;
+  font-synthesis: small-caps;
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -104,7 +110,7 @@ p { text-wrap: pretty; }
 .section-title { font-size: clamp(1.5rem, 3.5vw, 1.9rem); margin-bottom: 1.25rem; }
 
 /* Small-caps span emitted by the CV parser */
-.sc { font-variant-caps: all-small-caps; letter-spacing: 0.04em; }
+.sc { font-variant-caps: all-small-caps; font-synthesis: small-caps; letter-spacing: 0.04em; }
 
 /* Chips (resource links + filters) --------------------------------------- */
 .chip {

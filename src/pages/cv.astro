@@ -2,10 +2,17 @@
 import Base from "../layouts/Base.astro";
 import Nav from "../components/Nav.astro";
 import CommandPalette from "../components/CommandPalette.astro";
+import Icon from "../components/Icon.astro";
 import { site } from "../data/site";
 import cv from "../generated/cv.json";
 
 const pdfHref = "/cv/indraneil-paul-cv.pdf";
+
+// Resource-link kinds that have a matching glyph in Icon.astro, so the /cv
+// chips carry the same iconset as the homepage (slides / abstract / pdf /
+// email, plus the other publication kinds). Kinds without a glyph
+// (certificate, enrolment, event page) stay text-only.
+const ICON_KINDS = new Set(["abstract", "pdf", "slides", "code", "demo", "project", "email"]);
 ---
 
 <Base title="Curriculum Vitae" path="/cv" description={`Curriculum vitae of ${site.name} — ${site.role}.`}>
@@ -46,7 +53,9 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
                   {e.links?.length > 0 && (
                     <span class="cv-links">
                       {e.links.map((l: any) => (
-                        <a class="chip" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                        <a class="chip" href={l.href} target="_blank" rel="noopener">
+                          {ICON_KINDS.has(l.kind) && <Icon name={l.kind} />}{l.label}
+                        </a>
                       ))}
                     </span>
                   )}
@@ -65,7 +74,9 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
                     {e.links?.length > 0 && (
                       <span class="cv-links">
                         {e.links.map((l: any) => (
-                          <a class="chip" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                          <a class="chip" href={l.href} target="_blank" rel="noopener">
+                            {ICON_KINDS.has(l.kind) && <Icon name={l.kind} />}{l.label}
+                          </a>
                         ))}
                       </span>
                     )}
@@ -96,7 +107,8 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
 </Base>
 
 <style>
-  .cv { max-width: 48rem; margin-inline: auto; padding: clamp(2.5rem, 6vw, 4rem) var(--gutter) 5rem; }
+  /* Match the landing page's reading width (--measure). */
+  .cv { max-width: var(--measure); margin-inline: auto; padding: clamp(2.5rem, 6vw, 4rem) var(--gutter) 5rem; }
 
   .cv-head { border-bottom: 1px solid var(--rule); padding-bottom: 1.75rem; margin-bottom: 2.25rem; }
   .cv-head-top {
@@ -153,16 +165,17 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
     padding-block: 0.85rem;
   }
   .cv-row + .cv-row { border-top: 1px solid var(--rule); }
-  .cv-when { font-size: 0.78rem; color: var(--faint); padding-top: 0.15rem; white-space: nowrap; }
+  /* Left column (dates and institution names) — bolder and darker for weight. */
+  .cv-when { font-size: 0.78rem; font-weight: 700; color: var(--ink); padding-top: 0.15rem; white-space: nowrap; }
   /* Heading + its resource links share one baseline; links flush-right. */
   .cv-headline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.9rem; }
   .cv-heading { font-weight: 600; font-size: 0.98rem; }
-  .cv-heading :global(a) { color: var(--accent-bright); text-decoration: none; border-bottom: 1px solid var(--wash-strong); }
-  .cv-heading :global(a:hover) { border-color: var(--accent); }
+  .cv-heading :global(a) { color: var(--accent); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--accent); }
+  .cv-heading :global(a:hover) { border-bottom-width: 2px; }
 
   .cv-bullets { margin: 0.5rem 0 0; padding-left: 1.1rem; color: var(--muted); }
   .cv-bullets li { margin-block: 0.25rem; font-size: 0.92rem; }
-  .cv-bullets :global(a) { color: var(--accent-bright); text-decoration: none; border-bottom: 1px solid var(--wash-strong); }
+  .cv-bullets :global(a) { color: var(--accent); font-weight: 700; text-decoration: none; border-bottom: 1px solid var(--accent); }
   .cv-bullets :global(code) { font-family: var(--mono); font-size: 0.85em; background: var(--wash); padding: 0.05em 0.3em; border-radius: 3px; }
 
   .cv-meta { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem; align-items: center; }
@@ -188,6 +201,7 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
   .cv-venue :global(a) { color: var(--accent-bright); text-decoration: none; }
   /* Push resource chips flush-right, onto the venue / heading line. */
   .cv-links { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
+  .cv-links .chip { display: inline-flex; align-items: center; gap: 0.4em; }
 
   @media (max-width: 560px) {
     .cv-row { grid-template-columns: 1fr; gap: 0.3rem; }

@@ -25,7 +25,6 @@ function titleHref(p: (typeof publications)[number]) {
 <section id="publications" class="section" aria-label="Publications">
   <div class="wrap">
     <p class="eyebrow"><span class="em">📚</span>Publications</p>
-    <h2 class="section-title">Selected publications.</h2>
 
     <div class="filters" role="group" aria-label="Filter publications by topic" data-filters>
       <button type="button" class="chip filter" data-filter="all" data-active aria-pressed="true">
@@ -58,7 +57,11 @@ function titleHref(p: (typeof publications)[number]) {
             <div class="pub-meta">
               <span class="venue">{p.venue}</span>
               {p.status && <span class="badge">{p.status}</span>}
-              {p.award && <span class="badge award"><Icon name="award" />{p.award}</span>}
+              {p.award && (p.awardHref ? (
+                <a class="badge award" href={p.awardHref} target="_blank" rel="noopener" title="View certificate"><Icon name="award" />{p.award}</a>
+              ) : (
+                <span class="badge award"><Icon name="award" />{p.award}</span>
+              ))}
             </div>
             <div class="pub-links">
               {p.links.map((l) => (
@@ -139,6 +142,8 @@ function titleHref(p: (typeof publications)[number]) {
     padding: 0.1rem 0.4rem;
   }
   .badge.award { display: inline-flex; align-items: center; gap: 0.3em; color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }
+  a.badge.award { text-decoration: none; transition: border-color 0.18s var(--ease), background 0.18s var(--ease); }
+  a.badge.award:hover { border-color: var(--accent); background: var(--wash-strong); }
 
   .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
   .pub-links .chip { display: inline-flex; align-items: center; gap: 0.4em; }

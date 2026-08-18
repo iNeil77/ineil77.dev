@@ -35,6 +35,8 @@ export interface Publication {
   status?: string;
   /** e.g. "Outstanding Paper" */
   award?: string;
+  /** link to the award certificate, if the \award macro carried a URL */
+  awardHref?: string;
   /** category tags — drive the filter chips */
   tags: string[];
   links: PubLink[];
@@ -85,9 +87,12 @@ interface RawEntry {
 
 function adapt(entry: RawEntry): Publication {
   const venueHtml = entry.venue || "";
-  // Award: the label of the inline link the \award macro renders in the venue.
-  const awardMatch = /\(<a\b[^>]*>([^<]*)<\/a>\)/.exec(venueHtml);
-  const award = awardMatch ? collapse(awardMatch[1]) : undefined;
+  // Award: the inline link the \award macro renders in the venue — capture both
+  // its label ("Outstanding Paper") and its certificate URL, so the homepage
+  // badge can link to the certificate.
+  const awardMatch = /\(<a\b[^>]*href="([^"]*)"[^>]*>([^<]*)<\/a>\)/.exec(venueHtml);
+  const award = awardMatch ? collapse(awardMatch[2]) : undefined;
+  const awardHref = awardMatch ? awardMatch[1].replace(/&amp;/g, "&") : undefined;
 
   const venueText = collapse(stripHtml(venueHtml));
   const yearMatch = /\b(?:19|20)\d{2}\b/.exec(venueText);
@@ -127,6 +132,7 @@ function adapt(entry: RawEntry): Publication {
     year,
     ...(status ? { status } : {}),
     ...(award ? { award } : {}),
+    ...(awardHref ? { awardHref } : {}),
     tags: entry.tags || [],
     links,
   };

@@ -4,15 +4,20 @@ import { inline } from "../utils/text";
 import Icon from "./Icon.astro";
 
 // Maps each profile to its brand mark + official brand colour, so the row
-// carries the same iconography as the CV.
+// carries the same iconography as the CV. Hugging Face uses the official
+// brand amber (#FF9D00, from huggingface.co/brand) — the primary #FFD21E
+// yellow would be near-invisible as a single-colour mark on the cream page.
 const brand: Record<string, { icon: string; color: string }> = {
-  "Google Scholar": { icon: "scholar", color: "#4285F4" },
+  Scholar: { icon: "scholar", color: "#4285F4" },
   GitHub: { icon: "github", color: "#24292F" },
-  "Hugging Face": { icon: "huggingface", color: "#F59E0B" },
+  HuggingFace: { icon: "huggingface", color: "#FF9D00" },
   LinkedIn: { icon: "linkedin", color: "#0A66C2" },
-  X: { icon: "x", color: "#111111" },
-  Email: { icon: "email", color: "#EA4335" },
 };
+
+// Email and X live elsewhere (email in the Contact section; both stay in the
+// ⌘K palette), so they're kept out of the hero's profile row.
+const HIDE_IN_ROW = new Set(["Email", "X"]);
+const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
 ---
 
 <section id="about" class="section hero" aria-label="About">
@@ -28,7 +33,7 @@ const brand: Record<string, { icon: string; color: string }> = {
       </div>
 
       <ul class="socials" aria-label="Profiles and contact">
-        {socials.map((s) => {
+        {heroSocials.map((s) => {
           const b = brand[s.label];
           return (
             <li>
@@ -95,6 +100,7 @@ const brand: Record<string, { icon: string; color: string }> = {
   .role {
     font-family: var(--mono);
     font-size: 0.85rem;
+    font-weight: 700;
     color: var(--muted);
     margin-top: 0.5rem;
     letter-spacing: 0.01em;
@@ -123,7 +129,12 @@ const brand: Record<string, { icon: string; color: string }> = {
     transition: color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
   }
   .social :global(.icon) { font-size: 1.15rem; color: var(--brand, var(--accent)); }
-  .social-label { font-size: 0.9rem; }
+  .social-label {
+    font-size: 0.9rem;
+    font-variant-caps: small-caps;
+    font-synthesis: small-caps;
+    letter-spacing: 0.03em;
+  }
   .social:hover { color: var(--brand, var(--accent)); background: var(--wash); transform: translateY(-1px); }
   @media (prefers-reduced-motion: reduce) {
     .social { transition: color 0.18s var(--ease), background 0.18s var(--ease); }

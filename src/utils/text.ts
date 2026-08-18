@@ -9,22 +9,27 @@ const escapeHtml = (s: string): string =>
 const escapeAttr = (s: string): string => escapeHtml(s).replace(/"/g, "&quot;");
 
 /**
- * Expand the {label|href} inline-link mini-syntax into anchors, escaping all
- * surrounding text. Links to http(s)/mailto keep the same styling; external
- * links open in a new tab.
+ * Expand two inline mini-syntaxes, escaping all surrounding text:
+ *   {label|href}  → anchor (external http(s) links open in a new tab)
+ *   **text**      → <strong> (may wrap links; the inner text is re-expanded)
  */
 export function inline(text: string): string {
   let out = "";
-  const re = /\{([^{}|]+)\|([^{}]+)\}/g;
+  const re = /\*\*([\s\S]+?)\*\*|\{([^{}|]+)\|([^{}]+)\}/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
     out += escapeHtml(text.slice(last, m.index));
-    const label = escapeHtml(m[1].trim());
-    const href = m[2].trim();
-    const external = /^https?:/i.test(href);
-    const rel = external ? ' target="_blank" rel="noopener"' : "";
-    out += `<a href="${escapeAttr(href)}"${rel}>${label}</a>`;
+    if (m[1] !== undefined) {
+      // Bold span — recurse so any {label|href} links inside it expand too.
+      out += `<strong>${inline(m[1])}</strong>`;
+    } else {
+      const label = escapeHtml(m[2].trim());
+      const href = m[3].trim();
+      const external = /^https?:/i.test(href);
+      const rel = external ? ' target="_blank" rel="noopener"' : "";
+      out += `<a href="${escapeAttr(href)}"${rel}>${label}</a>`;
+    }
     last = m.index + m[0].length;
   }
   out += escapeHtml(text.slice(last));
