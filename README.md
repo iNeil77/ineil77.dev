@@ -28,8 +28,9 @@ The bio and news support a `{label|href}` inline-link mini-syntax.
 
 ## The CV
 
-`Personal_CV` (private) is a git submodule at `cv-src/`. Two artifacts are
-produced from it on every deploy:
+`Personal_CV` (private) is checked out by CI into `cv-src/` (its `main` branch,
+via `actions/checkout` in `deploy.yml`). Two artifacts are produced from it on
+every deploy:
 
 1. **Downloadable PDF** — compiled with **LuaLaTeX** on **TeX Live 2025**
    (pinned via the `texlive/texlive:TL2025-historic` Docker image), served at

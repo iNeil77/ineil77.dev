@@ -1,7 +1,7 @@
 // Parse the LaTeX CV (Personal_CV) into structured JSON for the /cv web page.
 //
 // Source resolution order:
-//   1. ./cv-src            (the private git submodule, used in CI + prod)
+//   1. ./cv-src            (CI checkout of the private CV repo, used in CI + prod)
 //   2. ../Personal_CV      (sibling clone, convenient for local dev)
 //   3. CV_SRC_DIR env var  (explicit override)
 // If none is found, a minimal placeholder is written so `astro build` still runs.

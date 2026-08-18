@@ -1,6 +1,6 @@
 name: Build & Deploy
 
-# Cloudflare Pages can't run this build itself (private CV submodule + a LuaLaTeX
+# Cloudflare Pages can't run this build itself (private CV source + a LuaLaTeX
 # compile), so CI does the whole thing and ships the finished dist/ with wrangler.
 on:
   push:
@@ -32,8 +32,8 @@ jobs:
     timeout-minutes: 20
     steps:
       # Mint a short-lived (1h) installation token from the CI GitHub App
-      # instead of storing a long-lived PAT. Scoped to just these two repos;
-      # auto-revoked when the job ends.
+      # instead of storing a long-lived PAT — used only to check out the private
+      # CV repo below. Scoped to just that repo; auto-revoked when the job ends.
       - name: Mint GitHub App token
         id: app-token
         uses: actions/create-github-app-token@v3
@@ -41,20 +41,23 @@ jobs:
           app-id: ${{ vars.CI_APP_ID }}
           private-key: ${{ secrets.CI_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: |
-            ineil77.dev
-            Personal_CV
+          repositories: Personal_CV
 
-      - name: Checkout (with private CV submodule)
+      - name: Checkout website
+        uses: actions/checkout@v7
+
+      # Bring in the CV LaTeX sources as a plain checkout of Personal_CV's
+      # main branch into cv-src/ (was a git submodule). Same "always build
+      # against the latest CV" semantics, minus the .gitmodules bookkeeping and
+      # the stale-pointer / forgotten-`--recursive` footguns. The App token
+      # grants read on the private repo.
+      - name: Checkout CV source (latest Personal_CV main)
         uses: actions/checkout@v7
         with:
-          submodules: recursive
-          # App token grants read on both repos, so it fetches this repo and
-          # the private Personal_CV submodule in one go.
+          repository: ${{ github.repository_owner }}/Personal_CV
+          ref: main
+          path: cv-src
           token: ${{ steps.app-token.outputs.token }}
-
-      - name: Pull latest CV into the submodule
-        run: git submodule update --remote --recursive cv-src
 
       - name: Compile CV (LuaLaTeX, pinned TeX Live 2025)
         run: |
