@@ -6,7 +6,7 @@
 
 :root {
   /* Paper + ink */
-  --bg: #fbfaf7;          /* warm off-white */
+  --bg: #faf9f5;          /* warm off-white (off-whiteness +20% vs #fbfaf7) */
   --bg-raised: #ffffff;   /* cards, palette */
   --ink: #1a1a18;         /* near-black text */
   --muted: #6b6b63;       /* warm gray, secondary text */

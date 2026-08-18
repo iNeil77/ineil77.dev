@@ -35,8 +35,8 @@ const base = absolute ? "/" : "";
     top: 0;
     z-index: 40;
     background: color-mix(in srgb, var(--bg) 82%, transparent);
-    backdrop-filter: saturate(1.4) blur(25px);
-    -webkit-backdrop-filter: saturate(1.4) blur(25px);
+    backdrop-filter: saturate(1.4) blur(50px);
+    -webkit-backdrop-filter: saturate(1.4) blur(50px);
     border-bottom: 1px solid transparent;
     transition: border-color 0.3s var(--ease), background 0.3s var(--ease);
   }
@@ -122,7 +122,8 @@ const base = absolute ? "/" : "";
   .cmdk:hover { border-color: var(--accent); color: var(--accent); }
   .cmdk-key { line-height: 1; }
 
-  /* On narrow screens the emoji dock carries navigation; hide the text links. */
+  /* On narrow screens the text links don't fit; the ⌘K palette button (always
+     visible) carries section navigation instead. */
   @media (max-width: 640px) {
     .links { display: none; }
     .brand-name { font-size: 0.98rem; }
