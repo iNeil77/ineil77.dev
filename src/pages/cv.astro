@@ -60,7 +60,16 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
               <li class="cv-row">
                 <div class="cv-when mono">{e.date}</div>
                 <div class="cv-what">
-                  <p class="cv-heading" set:html={e.heading} />
+                  <div class="cv-headline">
+                    <p class="cv-heading" set:html={e.heading} />
+                    {e.links?.length > 0 && (
+                      <span class="cv-links">
+                        {e.links.map((l: any) => (
+                          <a class="chip" href={l.href} target="_blank" rel="noopener">{l.label}</a>
+                        ))}
+                      </span>
+                    )}
+                  </div>
                   {e.bullets?.length > 0 && (
                     <ul class="cv-bullets">
                       {e.bullets.map((b: string) => (
@@ -68,12 +77,9 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
                       ))}
                     </ul>
                   )}
-                  {(e.tags?.length > 0 || e.links?.length > 0) && (
+                  {e.tags?.length > 0 && (
                     <div class="cv-meta">
-                      {e.links?.map((l: any) => (
-                        <a class="chip" href={l.href} target="_blank" rel="noopener">{l.label}</a>
-                      ))}
-                      {e.tags?.map((t: string) => (
+                      {e.tags.map((t: string) => (
                         <span class="cv-tag mono">{t}</span>
                       ))}
                     </div>
@@ -100,7 +106,10 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
     gap: 1rem;
     flex-wrap: wrap;
   }
-  .cv-head .eyebrow { margin-bottom: 0; }
+  /* Keep this page-header eyebrow at its original small size; only the
+     homepage section eyebrows are enlarged. */
+  .cv-head .eyebrow { margin-bottom: 0; font-size: 0.72rem; letter-spacing: 0.18em; gap: 0.6rem; }
+  .cv-head .eyebrow .em { font-size: 0.95rem; }
   .cv-head .eyebrow::after { display: none; }
 
   .cv-actions { display: flex; gap: 0.5rem; }
@@ -145,6 +154,8 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
   }
   .cv-row + .cv-row { border-top: 1px solid var(--rule); }
   .cv-when { font-size: 0.78rem; color: var(--faint); padding-top: 0.15rem; white-space: nowrap; }
+  /* Heading + its resource links share one baseline; links flush-right. */
+  .cv-headline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.9rem; }
   .cv-heading { font-weight: 600; font-size: 0.98rem; }
   .cv-heading :global(a) { color: var(--accent-bright); text-decoration: none; border-bottom: 1px solid var(--wash-strong); }
   .cv-heading :global(a:hover) { border-color: var(--accent); }
@@ -175,7 +186,8 @@ const pdfHref = "/cv/indraneil-paul-cv.pdf";
   .cv-venue { font-family: var(--mono); font-size: 0.74rem; color: var(--ink); }
   .cv-venue :global(strong) { font-weight: 600; }
   .cv-venue :global(a) { color: var(--accent-bright); text-decoration: none; }
-  .cv-links { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  /* Push resource chips flush-right, onto the venue / heading line. */
+  .cv-links { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-left: auto; }
 
   @media (max-width: 560px) {
     .cv-row { grid-template-columns: 1fr; gap: 0.3rem; }

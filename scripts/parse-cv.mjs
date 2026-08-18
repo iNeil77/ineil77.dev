@@ -8,9 +8,13 @@
 //
 // The CV uses a small, fixed set of macros from yaac-another-awesome-cv.cls:
 //   \sectionTitle{title}{icon}
-//   \begin{scholarship} \scholarshipentry{date}{desc} ...        -> "timeline"
-//   \begin{experiences} \experience{date}{head}{body}{tags} ...  -> "experience"
-//   \begin{projects}    \project{title}{meta} ...                -> "publications"
+//   \begin{scholarship} \scholarshipentry[reslinks]{date}{desc} ...       -> "timeline"
+//   \begin{experiences} \experience{date}{head}{body}{tags} ...           -> "experience"
+//   \begin{projects}    \project{title}{venue}{authors}{reslinks} ...     -> "publications"
+// Resource links are OPTIONAL, named key=value pairs (see \reslinks in the
+// .cls): slides={url}, abstract={url}, pdf={url}, demo, project, code,
+// enrolment, certificate, eventpage, repopage, email={addr}. Only the keys
+// present render. Venues may carry an inline \award{url}{label}.
 // plus inline \textbf \texttt \textsc \emph \textcolor \href and \…Symbol.
 
 import fs from "node:fs";
@@ -143,6 +147,122 @@ function findEntries(tex, macro, argc) {
   return out;
 }
 
+// Read a balanced [...] group; `i` must point at the opening bracket. A ']'
+// inside a nested {...} (e.g. a URL, though ours have none) does not close it.
+function readBracket(s, i) {
+  if (s[i] !== "[") return null;
+  let bdepth = 0; // brace depth
+  let sdepth = 0; // square-bracket depth
+  for (let j = i; j < s.length; j++) {
+    const c = s[j];
+    if (c === "\\") {
+      j++;
+      continue;
+    }
+    if (c === "{") bdepth++;
+    else if (c === "}") bdepth--;
+    else if (bdepth === 0 && c === "[") sdepth++;
+    else if (bdepth === 0 && c === "]") {
+      sdepth--;
+      if (sdepth === 0) return { content: s.slice(i + 1, j), end: j + 1 };
+    }
+  }
+  return null;
+}
+
+// \scholarshipentry[<reslinks>]{date}{desc}: capture the optional key=value
+// link list plus the two mandatory args.
+function findScholarshipEntries(tex) {
+  const token = "\\scholarshipentry";
+  const out = [];
+  let idx = 0;
+  while (true) {
+    const at = indexOfMacro(tex, token, idx);
+    if (at === -1) break;
+    let j = skipSpaces(tex, at + token.length);
+    let opt = "";
+    if (tex[j] === "[") {
+      const b = readBracket(tex, j);
+      if (b) {
+        opt = b.content;
+        j = b.end;
+      }
+    }
+    const { args, end } = readArgs(tex, j, 2);
+    out.push({ opt, args });
+    idx = end > j ? end : j + 1;
+  }
+  return out;
+}
+
+// Resource-link key -> visible label, mirroring the \defreslink lines in the
+// .cls so the web chips read exactly like the PDF.
+const RESLINK_LABELS = {
+  slides: "Slides",
+  abstract: "Abstract",
+  pdf: "PDF",
+  demo: "Demo",
+  project: "Project",
+  code: "Code",
+  enrolment: "Enrolment",
+  certificate: "Certificate",
+  eventpage: "Event Page",
+  repopage: "Event Page",
+  email: "Email",
+};
+
+// Parse a keyval string like "slides={url}, abstract={url}, email={addr}" into
+// [{ label, href, kind }]. Values are usually brace-wrapped (protecting the
+// commas/= inside URLs); a bare value runs to the next top-level comma.
+function parseReslinks(str) {
+  const out = [];
+  if (!str) return out;
+  const n = str.length;
+  let i = 0;
+  while (i < n) {
+    while (i < n && /[\s,]/.test(str[i])) i++;
+    if (i >= n) break;
+    const km = /^[a-zA-Z]+/.exec(str.slice(i));
+    if (!km) {
+      i++;
+      continue;
+    }
+    const key = km[0].toLowerCase();
+    i += km[0].length;
+    i = skipSpaces(str, i);
+    if (str[i] !== "=") continue;
+    i = skipSpaces(str, i + 1);
+    let value;
+    if (str[i] === "{") {
+      const g = readGroup(str, i);
+      if (!g) break;
+      value = g.content;
+      i = g.end;
+    } else {
+      const start = i;
+      let depth = 0;
+      while (i < n) {
+        const c = str[i];
+        if (c === "\\") {
+          i += 2;
+          continue;
+        }
+        if (c === "{") depth++;
+        else if (c === "}") depth--;
+        else if (c === "," && depth === 0) break;
+        i++;
+      }
+      value = str.slice(start, i);
+    }
+    value = value.trim();
+    const label = RESLINK_LABELS[key];
+    if (!label || !value) continue;
+    const href = key === "email" ? `mailto:${value}` : value;
+    out.push({ label, href, kind: key });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Inline LaTeX -> HTML / text
 // ---------------------------------------------------------------------------
@@ -228,6 +348,29 @@ function convert(fragment, opts = {}) {
         const inner = convert(a2.content, opts);
         out += inner.html;
         links.push(...inner.links);
+        i = a2.end;
+        continue;
+      }
+
+      // \award{url}{label} — a paper award shown inline in the venue, e.g.
+      // "ACL 2024 Oral, Bangkok (Outstanding Paper)". Rendered as a
+      // parenthesised inline link; not peeled into the resource chips.
+      if (name === "award") {
+        const a1 = readGroup(fragment, skipSpaces(fragment, j)); // url
+        if (!a1) {
+          i = j;
+          continue;
+        }
+        const a2 = readGroup(fragment, skipSpaces(fragment, a1.end)); // label
+        if (!a2) {
+          i = a1.end;
+          continue;
+        }
+        const url = collapse(stripTags(convert(a1.content, { inlineLinks: true }).html));
+        const label = collapse(stripTags(convert(a2.content, { inlineLinks: true }).html));
+        links.push({ label, href: url });
+        if (inlineLinks && label)
+          out += ` (<a href="${escapeAttr(url)}">${escapeHtml(label)}</a>)`;
         i = a2.end;
         continue;
       }
@@ -342,9 +485,16 @@ function detectType(tex) {
 }
 
 function parseTimeline(tex) {
-  return findEntries(tex, "scholarshipentry", 2).map(([date, desc]) => {
+  return findScholarshipEntries(tex).map(({ opt, args }) => {
+    const [date, desc] = args;
     const { html, links } = headingAndLinks(desc || "");
-    return { date: toText(date || ""), heading: html, links };
+    const optLinks = parseReslinks(opt);
+    // opt links (the new explicit form) first; keep any stray inline links too.
+    return {
+      date: toText(date || ""),
+      heading: html,
+      links: dedupeLinks([...optLinks, ...links]),
+    };
   });
 }
 
@@ -385,21 +535,14 @@ function skipInlineOptional(s) {
 }
 
 function parsePublications(tex) {
-  return findEntries(tex, "project", 2).map(([title, meta]) => {
-    const m = meta || "";
-    const parts = m.split(/\\\\/); // split on LaTeX line break \\
-    const venueLine = parts[0] || "";
-    const authorLine = parts.slice(1).join(" ");
-    const hfill = venueLine.indexOf("\\hfill");
-    const venuePart = hfill === -1 ? venueLine : venueLine.slice(0, hfill);
-    const linkPart = hfill === -1 ? "" : venueLine.slice(hfill);
-    return {
-      title: toText(title || ""),
-      venue: toHtml(venuePart),
-      authors: toHtml(authorLine),
-      links: dedupeLinks(convert(linkPart, { inlineLinks: false }).links),
-    };
-  });
+  return findEntries(tex, "project", 4).map(([title, venue, authors, reslinks]) => ({
+    title: toText(title || ""),
+    // Venue keeps any inline \award{...} link; resource chips come from the
+    // explicit key=value list only.
+    venue: toHtml(venue || ""),
+    authors: toHtml(authors || ""),
+    links: dedupeLinks(parseReslinks(reslinks || "")),
+  }));
 }
 
 // ---------------------------------------------------------------------------

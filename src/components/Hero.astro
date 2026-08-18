@@ -1,15 +1,23 @@
 ---
 import { site, bio, socials, status } from "../data/site";
 import { inline } from "../utils/text";
+import Icon from "./Icon.astro";
+
+// Maps each profile to its brand mark + official brand colour, so the row
+// carries the same iconography as the CV.
+const brand: Record<string, { icon: string; color: string }> = {
+  "Google Scholar": { icon: "scholar", color: "#4285F4" },
+  GitHub: { icon: "github", color: "#24292F" },
+  "Hugging Face": { icon: "huggingface", color: "#F59E0B" },
+  LinkedIn: { icon: "linkedin", color: "#0A66C2" },
+  X: { icon: "x", color: "#111111" },
+  Email: { icon: "email", color: "#EA4335" },
+};
 ---
 
 <section id="about" class="section hero" aria-label="About">
   <div class="wrap hero-grid">
     <div class="hero-text">
-      <p class="status">
-        <span class="dot" aria-hidden="true">{status.emoji}</span>
-        <span class="status-text">{status.text}</span>
-      </p>
       <h1 class="name">{site.name}</h1>
       <p class="role">{site.role}</p>
 
@@ -20,19 +28,23 @@ import { inline } from "../utils/text";
       </div>
 
       <ul class="socials" aria-label="Profiles and contact">
-        {socials.map((s) => (
-          <li>
-            <a
-              href={s.href}
-              class="social"
-              target={s.href.startsWith("mailto:") ? undefined : "_blank"}
-              rel={s.href.startsWith("mailto:") ? undefined : "noopener"}
-            >
-              <span class="social-label">{s.label}</span>
-              {s.handle && <span class="social-handle">{s.handle}</span>}
-            </a>
-          </li>
-        ))}
+        {socials.map((s) => {
+          const b = brand[s.label];
+          return (
+            <li>
+              <a
+                href={s.href}
+                class="social"
+                style={b ? `--brand: ${b.color}` : undefined}
+                target={s.href.startsWith("mailto:") ? undefined : "_blank"}
+                rel={s.href.startsWith("mailto:") ? undefined : "noopener"}
+              >
+                {b && <Icon name={b.icon} />}
+                <span class="social-label">{s.label}</span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </div>
 
@@ -45,6 +57,9 @@ import { inline } from "../utils/text";
         loading="eager"
         decoding="async"
       />
+      <p class="location">
+        <span class="pin" aria-hidden="true">{status.emoji}</span>{status.text}
+      </p>
     </div>
   </div>
 </section>
@@ -59,24 +74,18 @@ import { inline } from "../utils/text";
   }
   .hero-text { min-width: 0; }
 
-  .status {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.45rem;
-    max-width: 100%;
+  .location {
+    margin-top: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
     font-family: var(--mono);
-    font-size: 0.74rem;
-    line-height: 1.4;
+    font-size: 0.75rem;
     letter-spacing: 0.02em;
-    color: var(--accent);
-    background: var(--wash);
-    border: 1px solid var(--wash-strong);
-    border-radius: 14px;
-    padding: 0.35rem 0.8rem 0.35rem 0.6rem;
-    margin-bottom: 1.1rem;
+    color: var(--muted);
   }
-  .status-text { min-width: 0; }
-  .dot { font-size: 0.8rem; flex: none; }
+  .pin { font-size: 0.95em; }
 
   .name {
     font-size: clamp(2.25rem, 6vw, 3rem);
@@ -97,24 +106,29 @@ import { inline } from "../utils/text";
   .socials {
     list-style: none;
     padding: 0;
-    margin: 1.9rem 0 0;
+    margin: 2rem 0 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.4rem 0.6rem;
   }
   .social {
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.4rem;
+    align-items: center;
+    gap: 0.45rem;
     text-decoration: none;
-    border: 1px solid var(--rule-strong);
+    color: var(--ink);
+    padding: 0.4rem 0.7rem;
     border-radius: var(--radius);
-    padding: 0.35rem 0.7rem;
-    transition: border-color 0.18s var(--ease), background 0.18s var(--ease);
+    transition: color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
   }
-  .social:hover { border-color: var(--accent); background: var(--wash); }
-  .social-label { font-size: 0.85rem; color: var(--ink); }
-  .social-handle { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .social :global(.icon) { font-size: 1.15rem; color: var(--brand, var(--accent)); }
+  .social-label { font-size: 0.9rem; }
+  .social:hover { color: var(--brand, var(--accent)); background: var(--wash); transform: translateY(-1px); }
+  @media (prefers-reduced-motion: reduce) {
+    .social { transition: color 0.18s var(--ease), background 0.18s var(--ease); }
+    .social:hover { transform: none; }
+  }
 
   .hero-photo {
     position: sticky;
@@ -136,7 +150,8 @@ import { inline } from "../utils/text";
       position: static;
       order: -1;
       justify-self: start;
-      width: clamp(6.5rem, 34vw, 9rem);
     }
+    .hero-photo img { width: clamp(6.5rem, 34vw, 9rem); }
+    .location { justify-content: flex-start; }
   }
 </style>

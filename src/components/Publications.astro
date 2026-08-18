@@ -1,6 +1,7 @@
 ---
 import { publications, pubCategories } from "../data/publications";
 import { highlightAuthor } from "../utils/text";
+import Icon from "./Icon.astro";
 
 const linkLabels: Record<string, string> = {
   abstract: "Abstract",
@@ -58,12 +59,12 @@ function titleHref(p: (typeof publications)[number]) {
             <div class="pub-meta">
               <span class="venue">{p.venue}</span>
               {p.status && <span class="badge">{p.status}</span>}
-              {p.award && <span class="badge award">{p.award}</span>}
+              {p.award && <span class="badge award"><Icon name="award" />{p.award}</span>}
             </div>
             <div class="pub-links">
               {p.links.map((l) => (
                 <a class="chip" href={l.href} target="_blank" rel="noopener">
-                  {linkLabels[l.kind] ?? l.kind}
+                  <Icon name={l.kind} />{linkLabels[l.kind] ?? l.kind}
                 </a>
               ))}
             </div>
@@ -139,9 +140,10 @@ function titleHref(p: (typeof publications)[number]) {
     border-radius: 4px;
     padding: 0.1rem 0.4rem;
   }
-  .badge.award { color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }
+  .badge.award { display: inline-flex; align-items: center; gap: 0.3em; color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }
 
   .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+  .pub-links .chip { display: inline-flex; align-items: center; gap: 0.4em; }
   .pubs-empty { color: var(--muted); padding-top: 1.5rem; }
 
   @media (max-width: 520px) {

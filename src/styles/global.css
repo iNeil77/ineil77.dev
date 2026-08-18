@@ -22,12 +22,12 @@
   --wash-strong: #dfeae1;
 
   /* Type */
-  --serif: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+  --serif: "Newsreader Variable", ui-serif, Georgia, "Times New Roman", serif;
   --sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, sans-serif;
   --mono: "Source Code Pro Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   /* Rhythm */
-  --measure: 46rem;
+  --measure: 57.5rem;   /* laptop/desktop reading width (25% wider than 46rem) */
   --gutter: clamp(1.25rem, 5vw, 2.5rem);
   --section-gap: clamp(3.75rem, 9vw, 6rem);
 
@@ -81,14 +81,16 @@ p { text-wrap: pretty; }
 /* Section eyebrow: mono, tracked, with an emoji marker */
 .eyebrow {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  /* Enlarged section markers: ~2.5x the old 0.72rem on desktop, clamped down
+     on narrow screens so the tracked label never overflows. */
+  font-size: clamp(1.05rem, 0.72rem + 1.7vw, 1.8rem);
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.7rem;
   margin-bottom: 1.5rem;
 }
 .eyebrow::after {
@@ -97,7 +99,7 @@ p { text-wrap: pretty; }
   height: 1px;
   background: var(--rule);
 }
-.eyebrow .em { font-size: 0.95rem; filter: saturate(0.85); }
+.eyebrow .em { font-size: 0.85em; filter: saturate(0.85); }
 
 .section-title { font-size: clamp(1.5rem, 3.5vw, 1.9rem); margin-bottom: 1.25rem; }
 

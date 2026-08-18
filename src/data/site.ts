@@ -71,9 +71,9 @@ export const bio: string[] = [
   "Previously I was an Applied Scientist at Amazon, and before that a dual-degree student at {IIIT Hyderabad|https://iiit.ac.in}. I've contributed to several open code-LM releases, including {StarCoder2|https://huggingface.co/blog/starcoder2} and {BigCodeBench|https://bigcode-bench.github.io}.",
 ];
 
-// Optional short status line shown under the name.
+// Location shown under the profile photo.
 export const status = {
-  text: "Applied Scientist PhD Intern at Amazon (AWS), Berlin",
+  text: "Berlin, Germany",
   emoji: "\u{1F4CD}", // 📍
 };
 

@@ -1,9 +1,5 @@
 ---
-import { site, socials } from "../data/site";
-
-const primary = socials.filter((s) =>
-  ["Email", "Google Scholar", "GitHub"].includes(s.label)
-);
+import { site } from "../data/site";
 ---
 
 <section id="contact" class="section contact" aria-label="Contact">
@@ -13,7 +9,7 @@ const primary = socials.filter((s) =>
     <p class="prose lede">
       I'm always glad to talk about code models, verifiers, and long-horizon
       agents — or to hear about roles and collaborations. Reach me by email, or
-      find me on the profiles below.
+      find me on the profiles linked at the top of the page.
     </p>
 
     <div class="actions">
@@ -21,16 +17,6 @@ const primary = socials.filter((s) =>
       <a class="btn" href="/cv">View CV</a>
       <a class="btn" href="/cv/indraneil-paul-cv.pdf" target="_blank" rel="noopener">Download CV (PDF)</a>
     </div>
-
-    <ul class="links">
-      {socials
-        .filter((s) => !s.href.startsWith("mailto:"))
-        .map((s) => (
-          <li>
-            <a href={s.href} target="_blank" rel="noopener">{s.label}</a>
-          </li>
-        ))}
-    </ul>
   </div>
 </section>
 
@@ -60,17 +46,4 @@ const primary = socials.filter((s) =>
     color: #fff;
   }
   .btn.primary:hover { background: var(--accent-hover); color: #fff; }
-
-  .links {
-    list-style: none;
-    padding: 0;
-    margin: 1.75rem 0 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem 1.25rem;
-    font-family: var(--mono);
-    font-size: 0.8rem;
-  }
-  .links a { color: var(--muted); text-decoration: none; transition: color 0.18s var(--ease); }
-  .links a:hover { color: var(--accent); }
 </style>
