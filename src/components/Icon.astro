@@ -15,15 +15,20 @@ interface Props {
 }
 const { name } = Astro.props;
 
-// Strip the file's outer <svg> wrapper so we can re-wrap with our own sizing.
-const hfInner = hfRaw.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+// Strip the file's outer <svg> wrapper so we can re-wrap with our own sizing,
+// and drop the outermost white rim path — it only added a border/halo and left
+// the coloured mark padded (so it read smaller than the monochrome silhouettes).
+const hfInner = hfRaw
+  .replace(/^[\s\S]*?<svg[^>]*>/, "")
+  .replace(/<\/svg>\s*$/, "")
+  .replace(/<path\b[^>]*fill="white"[^>]*>/i, "");
 
-// Multi-colour logos: rendered with their native viewBox and their own path
-// fills (so `currentColor` and hover tinting don't apply). The Hugging Face
-// mark's outermost white rim simply disappears on a light background, which is
-// its intended behaviour everywhere.
+// Multi-colour logos: rendered with their own path fills (so `currentColor` and
+// hover tinting don't apply). The viewBox is cropped to the coloured content's
+// bounding box (measured from the source paths) so the mark fills the icon box
+// and stands as tall as the single-path brand marks beside it.
 const multicolor: Record<string, { viewBox: string; inner: string }> = {
-  huggingface: { viewBox: "0 0 256 256", inner: hfInner },
+  huggingface: { viewBox: "32 39 192 177", inner: hfInner },
 };
 
 const glyphs: Record<string, string> = {

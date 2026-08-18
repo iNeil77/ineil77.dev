@@ -8,7 +8,7 @@
     "parse:cv": "node scripts/parse-cv.mjs",
     "dev": "npm run parse:cv && astro dev",
     "start": "npm run parse:cv && astro dev",
-    "build": "npm run parse:cv && astro build",
+    "build": "npm run parse:cv && astro build && node scripts/csp-hashes.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

@@ -1,16 +1,18 @@
 ---
+import { Picture } from "astro:assets";
 import { site, bio, socials, status } from "../data/site";
 import { inline } from "../utils/text";
 import Icon from "./Icon.astro";
+import profileImg from "../assets/profile.jpg";
 
-// Maps each profile to its brand mark + brand colour (used to tint the label
-// on hover). Hugging Face renders as its full-colour official logo, so its
-// colour here only sets the amber hover tint to match.
-const brand: Record<string, { icon: string; color: string }> = {
-  Scholar: { icon: "scholar", color: "#4285F4" },
-  GitHub: { icon: "github", color: "#24292F" },
-  HuggingFace: { icon: "huggingface", color: "#FF9D00" },
-  LinkedIn: { icon: "linkedin", color: "#0A66C2" },
+// Maps each profile to its brand mark. The matching brand colour (used to tint
+// the label + icon on hover) lives in CSS, keyed off the `data-brand` attribute
+// below — see the `.social[data-brand=…]` rules.
+const brand: Record<string, { icon: string }> = {
+  Scholar: { icon: "scholar" },
+  GitHub: { icon: "github" },
+  HuggingFace: { icon: "huggingface" },
+  LinkedIn: { icon: "linkedin" },
 };
 
 // Email and X live elsewhere (email in the Contact section; both stay in the
@@ -27,11 +29,13 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
     </div>
 
     <div class="hero-photo">
-      <img
-        src="/profile.jpg"
+      <Picture
+        src={profileImg}
+        formats={["avif", "webp"]}
+        widths={[320, 640]}
+        sizes="(max-width: 720px) 55vw, 208px"
+        quality={88}
         alt={`Portrait of ${site.name}`}
-        width="320"
-        height="320"
         loading="eager"
         decoding="async"
       />
@@ -55,7 +59,7 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
               <a
                 href={s.href}
                 class="social"
-                style={b ? `--brand: ${b.color}` : undefined}
+                data-brand={b ? b.icon : undefined}
                 target={s.href.startsWith("mailto:") ? undefined : "_blank"}
                 rel={s.href.startsWith("mailto:") ? undefined : "noopener"}
               >
@@ -71,7 +75,9 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
 </section>
 
 <style>
-  .hero { padding-top: clamp(2.5rem, 7vw, 4.5rem); }
+  /* Bottom padding stays the full --section-gap so the bio→Research Interests
+     gap is preserved even though the other sections use the tighter rhythm. */
+  .hero { padding-top: clamp(2.5rem, 7vw, 4.5rem); padding-bottom: var(--section-gap); }
   /* Two rows: name + role (row 1), then bio + photo (row 2). Placing the photo
      in row 2 aligns its top edge with the top of the bio text. The row gap
      supplies the space between the role and the bio. */
@@ -135,9 +141,16 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
     transition: color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
   }
   .social :global(.icon) { font-size: 1.15rem; color: var(--brand, var(--accent)); }
-  /* The full-colour HF mark reads smaller than the monochrome silhouettes at
-     the same em size; bump it 25%. Row stays vertically centred (align-items). */
-  .social :global(.icon.icon-logo) { font-size: 1.4375rem; }
+  /* Brand colours (label + icon on hover; icon fill for the monochrome marks).
+     Kept in CSS rather than an inline style so the CSP needs no inline-style
+     allowance — keyed off data-brand set in the template. */
+  .social[data-brand="scholar"] { --brand: #4285F4; }
+  .social[data-brand="github"] { --brand: #24292F; }
+  .social[data-brand="huggingface"] { --brand: #FF9D00; }
+  .social[data-brand="linkedin"] { --brand: #0A66C2; }
+  /* HF mark now fills its (cropped) viewBox, so it only needs a small bump to
+     stand as tall as the single-path marks. Row stays vertically centred. */
+  .social :global(.icon.icon-logo) { font-size: 1.3rem; }
   .social-label {
     font-size: 0.9rem;
     font-variant-caps: small-caps;
@@ -156,8 +169,13 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
     position: sticky;
     top: 5rem;
   }
-  .hero-photo img {
+  /* <Picture> emits a <picture><img>… wrapper (component output, so :global). */
+  .hero-photo :global(picture) { display: block; }
+  .hero-photo :global(img) {
     width: 100%;
+    /* height:auto overrides the intrinsic width/height attributes so the square
+       aspect-ratio (not the 640px height hint) drives the box. */
+    height: auto;
     aspect-ratio: 1 / 1;
     object-fit: cover;
     border-radius: var(--radius-lg);
@@ -167,15 +185,18 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
   }
 
   @media (max-width: 720px) {
-    /* Single column: let the blocks flow and float the photo to the top. */
+    /* Single column: the blocks stack and the photo floats to the top, all
+       centre-aligned. The photo keeps its full (square) framing — same size as
+       desktop rather than the old shrunk crop. */
     .hero-grid { grid-template-columns: 1fr; row-gap: 1.25rem; }
     .hero-head, .hero-body, .hero-photo { grid-column: auto; grid-row: auto; }
     .hero-photo {
       position: static;
       order: -1;
-      justify-self: start;
+      justify-self: center;
     }
-    .hero-photo img { width: clamp(6.5rem, 34vw, 9rem); }
-    .location { justify-content: flex-start; }
+    .hero-photo :global(img) { width: min(13rem, 55vw); }
+    .hero-head { text-align: center; }
+    .location { justify-content: center; }
   }
 </style>

@@ -1,9 +1,8 @@
 ---
-import "@fontsource-variable/newsreader";
-import "@fontsource-variable/newsreader/wght-italic.css";
-import "@fontsource-variable/source-sans-3";
-import "@fontsource-variable/source-sans-3/wght-italic.css";
-import "@fontsource-variable/source-code-pro";
+// Fonts: latin + latin-ext subsets only (see src/styles/fonts.css). Replaces the
+// full @fontsource imports, which shipped vietnamese/cyrillic/greek faces the
+// site never renders.
+import "../styles/fonts.css";
 import "../styles/global.css";
 import { site } from "../data/site";
 

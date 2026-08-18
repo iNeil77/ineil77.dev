@@ -18,7 +18,9 @@ const year = 2026;
   .footer {
     border-top: 1px solid var(--rule);
     padding-block: 2.5rem 5.5rem;
-    margin-top: var(--section-gap);
+    /* Contact's (tight) bottom padding already supplies the gap; keep it uniform
+       with the other section gaps rather than doubling it. */
+    margin-top: 0;
   }
   .footer-inner {
     display: flex;
