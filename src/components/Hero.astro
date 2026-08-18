@@ -153,6 +153,7 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
   .social :global(.icon.icon-logo) { font-size: 1.3rem; }
   .social-label {
     font-size: 0.9rem;
+    font-weight: 700;
     font-variant-caps: small-caps;
     font-synthesis: small-caps;
     letter-spacing: 0.03em;
@@ -198,5 +199,14 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
     .hero-photo :global(img) { width: min(13rem, 55vw); }
     .hero-head { text-align: center; }
     .location { justify-content: center; }
+    /* The four profile links become a 2×2 grid of equal invisible tiles; each
+       link is centred within its own cell so the pairs line up in both axes. */
+    .socials {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      justify-items: center;
+      gap: 0.5rem 0.6rem;
+    }
+    .social { justify-content: center; }
   }
 </style>

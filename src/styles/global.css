@@ -44,7 +44,11 @@
 /* Reset ------------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+/* The horizontal-overflow guard lives on the root, not <body>: an overflow-clip
+   on <body> makes it a backdrop root, which cancels the sticky nav's
+   backdrop-filter blur. On the root it still clips stray wide children but
+   leaves the viewport as the backdrop the nav samples. */
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
 body {
   background: var(--bg);
   color: var(--ink);
@@ -55,7 +59,6 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overflow-wrap: break-word;
-  overflow-x: clip; /* safety net against stray wide children */
 }
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; }

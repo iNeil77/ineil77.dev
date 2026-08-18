@@ -8,20 +8,20 @@ export interface NewsItem {
 
 export const news: NewsItem[] = [
   {
+    date: "2026-08-01",
+    text: "{Aletheia|https://openreview.net/forum?id=3rVrBGp0mr}, on what makes RLVR for code verifiers tick, accepted at TMLR.",
+  },
+  {
     date: "2026-07-01",
     text: "Co-organizing the {SemEval 2026 Task on GenAI Code Detection & Attribution|https://github.com/mbzuai-nlp/SemEval-2026-Task13}.",
   },
   {
-    date: "2026-03-01",
-    text: "{AICD Bench|https://aclanthology.org/2026.eacl-long.325/} accepted to EACL 2026 (Rabat).",
-  },
-  {
-    date: "2026-02-01",
-    text: "{Aletheia|https://openreview.net/forum?id=3rVrBGp0mr}, on what makes RLVR for code verifiers tick, accepted at TMLR.",
+    date: "2026-04-01",
+    text: "{AICD Bench|https://aclanthology.org/2026.eacl-long.325/} presented at EACL 2026 (Rabat).",
   },
   {
     date: "2025-11-01",
-    text: "{Droid|https://aclanthology.org/2025.emnlp-main.1593/}, a resource suite for AI-generated code detection, accepted to EMNLP 2025 (Suzhou).",
+    text: "{Droid|https://aclanthology.org/2025.emnlp-main.1593/}, a resource suite for AI-generated code detection, presented at EMNLP 2025 (Suzhou).",
   },
   {
     date: "2025-10-01",
