@@ -53,7 +53,6 @@ function titleHref(p: (typeof publications)[number]) {
               ) : (
                 p.title
               )}
-              {p.featured && <span class="star" title="Selected" aria-label="Selected">★</span>}
             </h3>
             <p class="pub-authors" set:html={highlightAuthor(p.authors)} />
             <div class="pub-meta">
@@ -117,7 +116,6 @@ function titleHref(p: (typeof publications)[number]) {
     transition: background-size 0.25s var(--ease), color 0.2s var(--ease);
   }
   .pub-title a:hover { color: var(--accent); background-size: 100% 1.5px; }
-  .star { color: var(--accent); font-size: 0.8em; margin-left: 0.3rem; vertical-align: 0.1em; }
 
   .pub-authors { font-size: 0.92rem; color: var(--muted); margin-top: 0.35rem; }
   .pub-authors :global(strong) { color: var(--ink); font-weight: 600; }

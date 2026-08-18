@@ -534,6 +534,22 @@ function skipInlineOptional(s) {
   return end === -1 ? s : t.slice(end + 1);
 }
 
+// Pull a single {…}-wrapped value out of a reslinks string for a key the PDF
+// renders nothing for (tags, id — see the hidden \define@key lines in the
+// .cls). parseReslinks skips these because they carry no RESLINK_LABELS entry,
+// so we read them here instead. The key must sit on a token boundary so "id"
+// never matches inside "slides", etc.
+function extractKey(str, key) {
+  const m = new RegExp(`(?:^|[,{\\s])${key}\\s*=\\s*\\{([^{}]*)\\}`).exec(str);
+  return m ? collapse(m[1]) : "";
+}
+
+// tags={A; B; C} -> ["A","B","C"] (semicolon-separated homepage filter groups).
+function extractTags(str) {
+  const raw = extractKey(str, "tags");
+  return raw ? raw.split(";").map((s) => collapse(s)).filter(Boolean) : [];
+}
+
 function parsePublications(tex) {
   return findEntries(tex, "project", 4).map(([title, venue, authors, reslinks]) => ({
     title: toText(title || ""),
@@ -541,6 +557,9 @@ function parsePublications(tex) {
     // explicit key=value list only.
     venue: toHtml(venue || ""),
     authors: toHtml(authors || ""),
+    // Hidden metadata for the homepage publication list (not rendered on /cv).
+    tags: extractTags(reslinks || ""),
+    id: extractKey(reslinks || "", "id"),
     links: dedupeLinks(parseReslinks(reslinks || "")),
   }));
 }

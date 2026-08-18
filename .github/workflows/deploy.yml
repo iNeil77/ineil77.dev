@@ -9,9 +9,13 @@ on:
   repository_dispatch:
     types: [cv-updated] # fired by Personal_CV when the CV changes
 
+# A push to main and the CV's repository_dispatch both resolve github.ref to
+# refs/heads/main, so they land in the same concurrency group. cancel-in-progress
+# would make them cancel each other (showing up as spurious "cancelled" runs);
+# queue them serially instead so both a code change and a CV update deploy fully.
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -23,6 +27,9 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Backstop so a hung run (e.g. a stalled LuaLaTeX compile) can't block the
+    # serialized queue indefinitely now that runs no longer cancel each other.
+    timeout-minutes: 20
     steps:
       # Mint a short-lived (1h) installation token from the CI GitHub App
       # instead of storing a long-lived PAT. Scoped to just these two repos;

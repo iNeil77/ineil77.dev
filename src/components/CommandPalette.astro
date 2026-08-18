@@ -60,7 +60,7 @@ const pubCmds: Cmd[] = publications.map((p) => {
     label: p.title,
     hint: `${p.venue} ${p.year}`,
     href: link?.href ?? `${base}#publications`,
-    emoji: p.featured ? "\u{2B50}" : "\u{1F4C4}",
+    emoji: "\u{1F4C4}",
     keywords: `${p.title} ${p.authors} ${p.venue} ${p.tags.join(" ")}`,
     external: link ? /^https?:/.test(link.href) : false,
   };
