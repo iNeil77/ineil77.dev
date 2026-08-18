@@ -163,6 +163,11 @@ function titleHref(p: (typeof publications)[number]) {
   @media (max-width: 520px) {
     .pub { grid-template-columns: 1fr; gap: 0.25rem; }
     .pub-year { padding-top: 0; }
+    /* The resource chips normally sit flush-right of the venue line; on phones
+       that crowds/overflows the narrow meta row, so drop the auto margin and
+       break them onto their own full-width line, left-aligned under the venue
+       + badges (both groups then read left-aligned). */
+    .pub-links { margin-left: 0; flex-basis: 100%; }
   }
 </style>
 
