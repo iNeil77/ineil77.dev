@@ -26,7 +26,9 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest so a runner-image migration can't silently
+    # change the build environment on a long-idle pipeline; bump deliberately.
+    runs-on: ubuntu-24.04
     # Backstop so a hung run (e.g. a stalled LuaLaTeX compile) can't block the
     # serialized queue indefinitely now that runs no longer cancel each other.
     timeout-minutes: 20
@@ -91,3 +93,34 @@ jobs:
           # Account ID is an identifier, not a secret — stored as a repo variable.
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=${{ env.CF_PAGES_PROJECT }} --branch=main
+
+      # Cloudflare Free floors browser/edge max-age to 4h, so after a deploy the
+      # canonical URLs (the HTML pages + the résumé PDF) keep serving the stale
+      # edge copy until the entry expires. Purge those specific, stable-named
+      # URLs so a deploy shows up immediately. Content-hashed /_astro/* assets
+      # are immutable and deliberately NOT purged. This step no-ops until
+      # CLOUDFLARE_ZONE_ID is set AND the token carries Zone → Cache Purge; it's
+      # best-effort (never fails an otherwise-good deploy — the cache self-heals
+      # in ~4h) but logs a warning if the purge is rejected.
+      - name: Purge Cloudflare edge cache for canonical URLs
+        if: ${{ vars.CLOUDFLARE_ZONE_ID != '' }}
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ZONE_ID: ${{ vars.CLOUDFLARE_ZONE_ID }}
+        run: |
+          set -uo pipefail
+          resp="$(curl -sS -X POST \
+            "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"files":[
+              "https://ineil77.dev/",
+              "https://ineil77.dev/cv",
+              "https://ineil77.dev/cv/",
+              "https://ineil77.dev/IndraneilCV.pdf"
+            ]}')"
+          if echo "$resp" | jq -e '.success == true' >/dev/null 2>&1; then
+            echo "Purged canonical URLs from the Cloudflare edge cache."
+          else
+            echo "::warning::Cloudflare cache purge did not succeed (deploy is fine; cache self-heals in ~4h). Response: $resp"
+          fi

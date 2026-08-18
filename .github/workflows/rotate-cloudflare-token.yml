@@ -36,7 +36,9 @@ jobs:
   rotate:
     # Skip scheduled runs until the CI App is configured (avoids noisy failures).
     if: ${{ vars.CI_APP_ID != '' }}
-    runs-on: ubuntu-latest
+    # Pinned so a runner-image migration can't change the environment underneath
+    # a workflow that only runs monthly; bump deliberately.
+    runs-on: ubuntu-24.04
     steps:
       - name: "Mint GitHub App token (Secrets: write)"
         id: app-token
