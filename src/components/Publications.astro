@@ -62,13 +62,15 @@ function titleHref(p: (typeof publications)[number]) {
               ) : (
                 <span class="badge award"><Icon name="award" />{p.award}</span>
               ))}
-            </div>
-            <div class="pub-links">
-              {p.links.map((l) => (
-                <a class="chip" href={l.href} target="_blank" rel="noopener">
-                  <Icon name={l.kind} />{linkLabels[l.kind] ?? l.kind}
-                </a>
-              ))}
+              {p.links.length > 0 && (
+                <div class="pub-links">
+                  {p.links.map((l) => (
+                    <a class="chip" href={l.href} target="_blank" rel="noopener">
+                      <Icon name={l.kind} />{linkLabels[l.kind] ?? l.kind}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </li>
@@ -146,7 +148,8 @@ function titleHref(p: (typeof publications)[number]) {
   a.badge.award { text-decoration: none; transition: border-color 0.18s var(--ease), background 0.18s var(--ease); }
   a.badge.award:hover { border-color: var(--accent); background: var(--wash-strong); }
 
-  .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+  /* Resource links sit flush-right on the venue line, mirroring the CV page. */
+  .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-left: auto; }
   .pub-links .chip { display: inline-flex; align-items: center; gap: 0.4em; }
   .pubs-empty { color: var(--muted); padding-top: 1.5rem; }
 

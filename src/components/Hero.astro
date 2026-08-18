@@ -21,10 +21,26 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
 
 <section id="about" class="section hero" aria-label="About">
   <div class="wrap hero-grid">
-    <div class="hero-text">
+    <div class="hero-head">
       <h1 class="name">{site.name}</h1>
       <p class="role">{site.role}</p>
+    </div>
 
+    <div class="hero-photo">
+      <img
+        src="/profile.jpg"
+        alt={`Portrait of ${site.name}`}
+        width="320"
+        height="320"
+        loading="eager"
+        decoding="async"
+      />
+      <p class="location">
+        <span class="pin" aria-hidden="true">{status.emoji}</span>{status.text}
+      </p>
+    </div>
+
+    <div class="hero-body">
       <div class="prose bio">
         {bio.map((para) => (
           <p set:html={inline(para)} />
@@ -51,32 +67,23 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
         })}
       </ul>
     </div>
-
-    <div class="hero-photo">
-      <img
-        src="/profile.jpg"
-        alt={`Portrait of ${site.name}`}
-        width="320"
-        height="320"
-        loading="eager"
-        decoding="async"
-      />
-      <p class="location">
-        <span class="pin" aria-hidden="true">{status.emoji}</span>{status.text}
-      </p>
-    </div>
   </div>
 </section>
 
 <style>
   .hero { padding-top: clamp(2.5rem, 7vw, 4.5rem); }
+  /* Two rows: name + role (row 1), then bio + photo (row 2). Placing the photo
+     in row 2 aligns its top edge with the top of the bio text. The row gap
+     supplies the space between the role and the bio. */
   .hero-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 13rem);
-    gap: clamp(1.75rem, 5vw, 2.75rem);
+    column-gap: clamp(1.75rem, 5vw, 2.75rem);
+    row-gap: 1.6rem;
     align-items: start;
   }
-  .hero-text { min-width: 0; }
+  .hero-head { grid-column: 1; grid-row: 1; min-width: 0; }
+  .hero-body { grid-column: 1; grid-row: 2; min-width: 0; }
 
   .location {
     margin-top: 0.85rem;
@@ -105,7 +112,7 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
     letter-spacing: 0.01em;
   }
 
-  .bio { margin-top: 1.6rem; text-align: justify; }
+  .bio { text-align: justify; }
   .bio p + p { margin-top: 1rem; }
 
   .socials {
@@ -128,6 +135,9 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
     transition: color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
   }
   .social :global(.icon) { font-size: 1.15rem; color: var(--brand, var(--accent)); }
+  /* The full-colour HF mark reads smaller than the monochrome silhouettes at
+     the same em size; bump it 25%. Row stays vertically centred (align-items). */
+  .social :global(.icon.icon-logo) { font-size: 1.4375rem; }
   .social-label {
     font-size: 0.9rem;
     font-variant-caps: small-caps;
@@ -141,6 +151,8 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
   }
 
   .hero-photo {
+    grid-column: 2;
+    grid-row: 2;
     position: sticky;
     top: 5rem;
   }
@@ -155,7 +167,9 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
   }
 
   @media (max-width: 720px) {
-    .hero-grid { grid-template-columns: 1fr; }
+    /* Single column: let the blocks flow and float the photo to the top. */
+    .hero-grid { grid-template-columns: 1fr; row-gap: 1.25rem; }
+    .hero-head, .hero-body, .hero-photo { grid-column: auto; grid-row: auto; }
     .hero-photo {
       position: static;
       order: -1;
