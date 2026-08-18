@@ -9,7 +9,7 @@ node_modules/
 src/generated/cv.json
 
 # generated CV PDF copied in by CI from the LaTeX build
-public/cv/*.pdf
+public/IndraneilCV.pdf
 
 # env / local
 .env

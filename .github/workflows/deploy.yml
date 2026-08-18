@@ -68,9 +68,7 @@ jobs:
           test -f cv-src/cv.pdf
 
       - name: Stage the compiled PDF
-        run: |
-          mkdir -p public/cv
-          cp cv-src/cv.pdf public/cv/indraneil-paul-cv.pdf
+        run: cp cv-src/cv.pdf public/IndraneilCV.pdf
 
       - name: Setup Node
         uses: actions/setup-node@v7

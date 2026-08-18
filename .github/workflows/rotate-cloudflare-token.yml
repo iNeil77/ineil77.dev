@@ -1,14 +1,25 @@
 name: Rotate Cloudflare token
 
 # The Cloudflare deploy token can't use OIDC federation, so rather than leave it
-# static we roll its value on a schedule. Cloudflare keeps the same token ID and
-# permissions and returns a fresh secret, which we write back over
-# CLOUDFLARE_API_TOKEN. The CI GitHub App mints the short-lived token used to
-# update the secret.
+# static we replace it on a schedule. Each run mints a BRAND-NEW token that is an
+# exact copy (same name + permissions) of the current one, persists it over
+# CLOUDFLARE_API_TOKEN, verifies it works, and only THEN deletes the old token.
+# The old token stays valid the whole time, so a deploy always finds a working
+# token in the secret even if a run dies mid-rotation.
+#
+# This replaces the earlier roll-in-place (PUT .../value), which invalidated the
+# old secret the instant it minted the new one: a crash in the ~1s gap before
+# `gh secret set` persisted the new value would have left a stale secret and
+# 403'd the next deploy. Create-then-verify-then-retire has no such window — the
+# secret is only overwritten after the replacement is confirmed good, and the
+# old token is only retired after that. Worst case is an orphaned token, never
+# an outage. Needs no extra scopes (API Tokens → Edit already covers create +
+# delete; Pages → Edit is required to mint a copy carrying the same permission).
 #
 # The token must be created with two permission groups:
-#   - Account  → Cloudflare Pages → Edit   (what wrangler uses to deploy)
-#   - User     → API Tokens       → Edit   (lets it roll its own value)
+#   - Account  → Cloudflare Pages → Edit   (what wrangler uses to deploy; also
+#                                            lets it mint a copy with this perm)
+#   - User     → API Tokens       → Edit   (lets it create / verify / delete)
 on:
   schedule:
     - cron: "0 6 1 * *" # 06:00 UTC on the 1st of each month
@@ -36,7 +47,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ineil77.dev
 
-      - name: Roll the token and update the secret
+      - name: Rotate the token (create new, verify, then retire the old)
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -44,25 +55,60 @@ jobs:
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4"
 
-          # The token authenticates as itself; verify returns its own ID.
-          id="$(curl -fsS "$api/user/tokens/verify" \
+          # Normalise a token's policy set to a stable, comparable shape so we
+          # can assert the replacement grants exactly what the current one does.
+          norm='[.result.policies[] | {effect, resources, pg: ([.permission_groups[].id] | sort)}] | sort'
+
+          # The current token authenticates as itself; verify returns its own ID.
+          old_id="$(curl -fsS "$api/user/tokens/verify" \
             -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result.id')"
-          if [ -z "$id" ] || [ "$id" = "null" ]; then
+          if [ -z "$old_id" ] || [ "$old_id" = "null" ]; then
             echo "::error::Could not resolve the Cloudflare token ID. Is the token valid and does it have 'User → API Tokens → Edit'?"
             exit 1
           fi
 
-          # Roll returns a brand-new secret value for the same token ID; the old
-          # value is invalidated at this point, so we must persist the new one.
-          new="$(curl -fsS -X PUT "$api/user/tokens/$id/value" \
-            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result')"
-          if [ -z "$new" ] || [ "$new" = "null" ]; then
-            echo "::error::Cloudflare did not return a rolled token value."
+          # Read the current token's name + policies so the copy is identical.
+          detail="$(curl -fsS "$api/user/tokens/$old_id" -H "Authorization: Bearer $CF_TOKEN")"
+          name="$(jq -r '.result.name' <<<"$detail")"
+          old_norm="$(jq -cS "$norm" <<<"$detail")"
+          policies="$(jq -c '[.result.policies[] | {effect, resources, permission_groups: [.permission_groups[] | {id}]}]' <<<"$detail")"
+
+          # Create a NEW token with the same name + policies. The old token is
+          # untouched and stays valid, so deploys keep working throughout.
+          create="$(curl -fsS -X POST "$api/user/tokens" \
+            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            --data "$(jq -cn --arg name "$name" --argjson policies "$policies" '{name:$name, policies:$policies}')")"
+          new_id="$(jq -r '.result.id' <<<"$create")"
+          new_val="$(jq -r '.result.value' <<<"$create")"
+          if [ -z "$new_val" ] || [ "$new_val" = "null" ] || [ -z "$new_id" ] || [ "$new_id" = "null" ]; then
+            echo "::error::Cloudflare did not return a new token id/value."
             exit 1
           fi
-          echo "::add-mask::$new"
+          echo "::add-mask::$new_val"
 
-          # Persist it; the next deploy and the next roll read this back.
-          printf '%s' "$new" | gh secret set CLOUDFLARE_API_TOKEN \
+          # GUARD: before overwriting the secret, confirm the new token (a) is a
+          # faithful copy of the old policy set and (b) actually authenticates.
+          # If either check fails, delete the orphan and bail WITHOUT touching
+          # the secret — the old token is still live, so deploys stay safe.
+          new_detail="$(curl -fsS "$api/user/tokens/$new_id" -H "Authorization: Bearer $CF_TOKEN")"
+          new_norm="$(jq -cS "$norm" <<<"$new_detail")"
+          new_status="$(curl -fsS "$api/user/tokens/verify" -H "Authorization: Bearer $new_val" | jq -r '.result.status')"
+          if [ "$new_norm" != "$old_norm" ] || [ "$new_status" != "active" ]; then
+            echo "::error::New token is not a faithful, active copy (status=$new_status); deleting it and keeping the old token."
+            curl -fsS -X DELETE "$api/user/tokens/$new_id" -H "Authorization: Bearer $CF_TOKEN" >/dev/null 2>&1 || true
+            exit 1
+          fi
+
+          # Persist the verified new value; the next deploy and rotation read it.
+          printf '%s' "$new_val" | gh secret set CLOUDFLARE_API_TOKEN \
             --repo "${{ github.repository }}"
-          echo "Cloudflare token rolled; CLOUDFLARE_API_TOKEN updated."
+
+          # Only now retire the old token, authenticating with the new one to
+          # prove it can manage tokens too. Best-effort: an orphaned old token is
+          # a hygiene issue, not an outage, so don't fail the run if it hiccups.
+          if curl -fsS -X DELETE "$api/user/tokens/$old_id" \
+            -H "Authorization: Bearer $new_val" >/dev/null 2>&1; then
+            echo "Cloudflare token rotated: created $new_id, persisted, retired $old_id."
+          else
+            echo "::warning::New token $new_id is live and saved, but deleting old token $old_id failed (orphaned — remove it manually in the Cloudflare dashboard)."
+          fi

@@ -34,7 +34,7 @@ every deploy:
 
 1. **Downloadable PDF** — compiled with **LuaLaTeX** on **TeX Live 2025**
    (pinned via the `texlive/texlive:TL2025-historic` Docker image), served at
-   `/cv/indraneil-paul-cv.pdf`.
+   `/IndraneilCV.pdf` (old `/cv/indraneil-paul-cv.pdf` path 301-redirects there).
 2. **Web CV** (`/cv`) — `scripts/parse-cv.mjs` parses the fixed-format LaTeX
    sections into `src/generated/cv.json`, rendered by `src/pages/cv.astro` in
    the site's own colors and fonts.

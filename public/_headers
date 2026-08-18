@@ -19,9 +19,11 @@
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Résumé PDFs: refresh daily, but serve a stale copy for a week while revalidating.
-/cv/*.pdf
-  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+# Résumé PDF: short edge TTL so a freshly deployed CV surfaces within minutes
+# (the filename is stable, so unlike /_astro/* it can't be cache-busted). A
+# brief stale-while-revalidate keeps repeat downloads instant.
+/IndraneilCV.pdf
+  Cache-Control: public, max-age=300, stale-while-revalidate=3600
 
 # Static single assets (favicon, OG image) that change rarely.
 /favicon.svg
