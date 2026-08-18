@@ -56,7 +56,7 @@ function titleHref(p: (typeof publications)[number]) {
             <p class="pub-authors" set:html={highlightAuthor(p.authors)} />
             <div class="pub-meta">
               <span class="venue">{p.venue}</span>
-              {p.status && <span class="badge">{p.status}</span>}
+              {p.status && <span class={`badge status-${p.status.toLowerCase().replace(/\s+/g, "-")}`}>{p.status}</span>}
               {p.award && (p.awardHref ? (
                 <a class="badge award" href={p.awardHref} target="_blank" rel="noopener" title="View certificate"><Icon name="award" />{p.award}</a>
               ) : (
@@ -144,9 +144,16 @@ function titleHref(p: (typeof publications)[number]) {
     border-radius: 4px;
     padding: 0.1rem 0.4rem;
   }
-  .badge.award { display: inline-flex; align-items: center; gap: 0.3em; color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }
+  /* Tinted status/award boxes, keyed to the paper's standing. Each is a soft
+     wash background + matching hairline + saturated text, mirroring the site's
+     green chip treatment across four hues. */
+  .badge.award { display: inline-flex; align-items: center; gap: 0.3em; color: #8a6a00; border-color: #e6d18f; background: #faf2d3; } /* Outstanding Paper → gold */
   a.badge.award { text-decoration: none; transition: border-color 0.18s var(--ease), background 0.18s var(--ease); }
-  a.badge.award:hover { border-color: var(--accent); background: var(--wash-strong); }
+  a.badge.award:hover { border-color: #caa945; background: #f4e7b5; }
+
+  .badge.status-oral { color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }               /* Oral → British green */
+  .badge.status-under-review { color: #a4132f; border-color: #eebfc7; background: #fbe8eb; }                            /* Under Review → crimson */
+  .badge.status-poster { color: #135a9e; border-color: #bcd5f1; background: #e9f1fb; }                                  /* Poster → blue */
 
   /* Resource links sit flush-right on the venue line, mirroring the CV page. */
   .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-left: auto; }
