@@ -59,6 +59,47 @@ cascade a deploy. If token rotation ever silently stops firing, check keepalive 
 
 ---
 
+# Domain protection & the retired predecessor site
+
+## Predecessor `iNeil77.github.io` (retired → redirect)
+
+The site previously lived at `iNeil77.github.io` (Jekyll on GitHub Pages). It is
+now a **redirect-only stub** in the
+[`iNeil77.github.io`](https://github.com/iNeil77/iNeil77.github.io) repo — Pages
+still enabled (`master` root, `.nojekyll`): `index.html` bounces `/`, and
+`404.html` is the GitHub Pages catch-all that rebuilds the requested path, so old
+deep links survive (`iNeil77.github.io/IndraneilCV.pdf` →
+`ineil77.dev/IndraneilCV.pdf`). The redirect is **client-side** (JS +
+`meta refresh`) because GitHub Pages can't 301 an arbitrary path — deep paths
+return HTTP 404 carrying the redirect body, which is expected and fine.
+
+**Do not delete that repo.** Keeping it (and the `iNeil77` account) is what keeps
+the `iNeil77.github.io` namespace claimed; no one else can host there without
+owning the account. Enable account 2FA and don't rename/delete the account.
+
+## Prevent GitHub Pages takeover of `ineil77.dev`
+
+`ineil77.dev` is served by **Cloudflare** Pages, not GitHub, so there is no
+dangling `github.io` CNAME to hijack, and no repo currently claims it on GitHub
+Pages (`cname: null`). To stop any *other* GitHub account from attaching
+`ineil77.dev` as their Pages custom domain, **verify the domain** on the account.
+One-time; needs the Cloudflare dashboard for the DNS record (no CI credential can
+do it — the rotator token carries no DNS·Edit):
+
+1. GitHub → **Settings → Pages → Add a domain** → `ineil77.dev`.
+2. GitHub shows a **TXT challenge** — a host of the form
+   `_github-pages-challenge-<user>` and a token value. Copy them exactly.
+3. Cloudflare → `ineil77.dev` → **DNS → Records** → add that **TXT** record
+   (name = the challenge host, content = the token; TXT isn't proxied).
+4. Back in GitHub, click **Verify**. Optionally repeat for `www.ineil77.dev`.
+
+Verified domains show a green check and are locked to the `iNeil77` account.
+
+> **Status:** to be completed (as of 2026-08-19) — `protected_domain_state` was
+> `null` on the old repo and `ineil77.dev` is not yet a verified domain.
+
+---
+
 # Credential model
 
 Only **two** long-lived credentials exist: the GitHub App private key and the
