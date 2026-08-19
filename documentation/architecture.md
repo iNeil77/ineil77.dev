@@ -57,8 +57,15 @@ Consequences to remember:
 
 The production CSP also sets `default-src 'self'`, `img-src 'self' data:`,
 `font-src 'self'`, `connect-src 'self'`, `object-src 'none'`, `base-uri 'none'`,
-`frame-ancestors 'none'`, `upgrade-insecure-requests`. Zone-level hardening
-(DNSSEC, HSTS preload, SPF/DMARC, CAA) lives in the Cloudflare dashboard, not here.
+`frame-ancestors 'none'`, `upgrade-insecure-requests`. HSTS
+(`max-age=31536000; includeSubDomains`, **no** `preload`) ships in `_headers`
+above — it is an app-level header, not a zone setting. The DNS-level hardening
+that *does* live in the Cloudflare dashboard is **DNSSEC** (active), **SPF**
+(`v=spf1 -all` — the domain sends no mail) and **DMARC** (`p=reject`). **CAA is
+not currently configured.** Adding it is a reasonable future step, but the record
+must authorize every CA Cloudflare may use for Universal SSL (Let's Encrypt,
+Google Trust Services, SSL.com) or automatic cert renewal will break — a missing
+CAA is safer than a wrong one.
 
 ## Design language
 

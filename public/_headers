@@ -1,6 +1,7 @@
 # Security headers for all routes. Served verbatim by Cloudflare Pages.
-# See also the zone-level hardening (DNSSEC, SPF/DMARC, HSTS preload, CAA) that
-# lives in the Cloudflare dashboard, not here.
+# Complementary DNS-level hardening in the Cloudflare dashboard: DNSSEC, SPF
+# (v=spf1 -all) and DMARC (p=reject). CAA is NOT currently set. (HSTS below is an
+# app-level header, not a zone setting, and intentionally omits `preload`.)
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
