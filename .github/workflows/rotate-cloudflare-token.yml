@@ -58,13 +58,17 @@ jobs:
           api="https://api.cloudflare.com/client/v4"
 
           # cf METHOD URL BEARER [DATA] — call the Cloudflare API and echo the
-          # response body on success. On any non-2xx it surfaces Cloudflare's
-          # actual error object (code + message) via ::error:: and returns 1, so
-          # a rejected call aborts with a diagnosable reason instead of the bare
-          # `curl: (22) ... 400` that `curl -f` leaves behind. Safe to print the
-          # error body: a failed call carries no token value, CF_TOKEN lives only
-          # in the Authorization header (never a URL/body), and the minted value
-          # is ::add-mask::ed before it's ever touched.
+          # response body to STDOUT on success. On any non-2xx it surfaces
+          # Cloudflare's actual error object (code + message) via ::error:: and
+          # returns 1, so a rejected call aborts with a diagnosable reason
+          # instead of the bare `curl: (22) ... 400` that `curl -f` hides.
+          # Diagnostics go to STDERR (>&2) on purpose: cf is always called inside
+          # `x="$(cf ...)"`, which captures STDOUT — an ::error:: on stdout would
+          # be swallowed into the variable and never reach the step log. stdout
+          # carries only the response body (the function's return value). Safe to
+          # print error bodies: a failed call carries no token value, CF_TOKEN
+          # lives only in the Authorization header (never a URL/body), and the
+          # minted value is ::add-mask::ed before it's ever touched.
           cf() {
             local method="$1" url="$2" bearer="$3" data="${4:-}" out code body
             if [ -n "$data" ]; then
@@ -72,16 +76,16 @@ jobs:
                 -H "Authorization: Bearer $bearer" \
                 -H "Content-Type: application/json" \
                 --data "$data" -w $'\n%{http_code}')" \
-                || { echo "::error::Network error calling ${url##*/client/v4}"; return 1; }
+                || { echo "::error::Network error calling ${url##*/client/v4}" >&2; return 1; }
             else
               out="$(curl -sS -X "$method" "$url" \
                 -H "Authorization: Bearer $bearer" -w $'\n%{http_code}')" \
-                || { echo "::error::Network error calling ${url##*/client/v4}"; return 1; }
+                || { echo "::error::Network error calling ${url##*/client/v4}" >&2; return 1; }
             fi
             code="${out##*$'\n'}"
             body="${out%$'\n'*}"
             if [ "${code#2}" = "$code" ]; then
-              echo "::error::Cloudflare ${method} ${url##*/client/v4} -> HTTP ${code}: $(jq -c '.errors // .messages // .' <<<"$body" 2>/dev/null || printf '%s' "$body")"
+              echo "::error::Cloudflare ${method} ${url##*/client/v4} -> HTTP ${code}: $(jq -c '.errors // .messages // .' <<<"$body" 2>/dev/null || printf '%s' "$body")" >&2
               return 1
             fi
             printf '%s' "$body"
