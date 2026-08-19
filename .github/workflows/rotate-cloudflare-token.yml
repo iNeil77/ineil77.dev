@@ -1,25 +1,31 @@
-name: Rotate Cloudflare token
+name: Rotate Cloudflare deploy token
 
-# The Cloudflare deploy token can't use OIDC federation, so rather than leave it
-# static we replace it on a schedule. Each run mints a BRAND-NEW token that is an
-# exact copy (same name + permissions) of the current one, persists it over
-# CLOUDFLARE_API_TOKEN, verifies it works, and only THEN deletes the old token.
-# The old token stays valid the whole time, so a deploy always finds a working
-# token in the secret even if a run dies mid-rotation.
+# Two-token rotation. Cloudflare forbids an API-minted token from carrying the
+# "User → API Tokens → Edit" permission (error 1001: "sub-token is not allowed
+# to have permissions to manage other tokens"), so a single token can NEVER mint
+# its own faithful replacement — something durable must hold the token-management
+# permission. This is the production pattern (the same shape a Vault/Doppler
+# setup uses): a privileged rotator, quarantined away from the deploy path, mints
+# a short-lived, least-privilege operational token.
 #
-# This replaces the earlier roll-in-place (PUT .../value), which invalidated the
-# old secret the instant it minted the new one: a crash in the ~1s gap before
-# `gh secret set` persisted the new value would have left a stale secret and
-# 403'd the next deploy. Create-then-verify-then-retire has no such window — the
-# secret is only overwritten after the replacement is confirmed good, and the
-# old token is only retired after that. Worst case is an orphaned token, never
-# an outage. Needs no extra scopes (API Tokens → Edit already covers create +
-# delete; Pages → Edit is required to mint a copy carrying the same permission).
+#   CF_ROTATOR_TOKEN     durable USER token, set once by hand, NEVER rotated,
+#   (secret)             used ONLY by this job. Needs three permissions:
+#                          - Account → Cloudflare Pages → Edit
+#                          - Zone    → Cache Purge         (ineil77.dev zone)
+#                          - User    → API Tokens → Edit
+#                        (Pages + Cache Purge are required so it is ALLOWED to
+#                        grant those to the deploy token it creates.)
 #
-# The token must be created with two permission groups:
-#   - Account  → Cloudflare Pages → Edit   (what wrangler uses to deploy; also
-#                                            lets it mint a copy with this perm)
-#   - User     → API Tokens       → Edit   (lets it create / verify / delete)
+#   CLOUDFLARE_API_TOKEN the DEPLOY token used by deploy.yml (wrangler + cache
+#   (secret)             purge). ROTATED here: a fresh deploy-only copy carrying
+#                        just Pages·Edit + Cache Purge (NO token management, so
+#                        Cloudflare accepts it) is minted each run.
+#
+# Each run: mint a new deploy-only token, GET-compare its normalized policies +
+# verify it is active, persist it over CLOUDFLARE_API_TOKEN, and only THEN retire
+# the previous deploy token. The old deploy token stays valid throughout, so a
+# mid-run crash can never leave a stale secret that 403s deploys — worst case is
+# an orphaned token, never an outage. The rotator is never deleted.
 on:
   schedule:
     - cron: "0 6 1 * *" # 06:00 UTC on the 1st of each month
@@ -49,13 +55,21 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ineil77.dev
 
-      - name: Rotate the token (create new, verify, then retire the old)
+      - name: Rotate the deploy token (mint deploy-only copy, verify, retire old)
         env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ROTATOR_TOKEN: ${{ secrets.CF_ROTATOR_TOKEN }}
+          CF_DEPLOY_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4"
+
+          # No-op (green) until the rotator secret is configured, so scheduled
+          # runs don't fail noisily before the one-time setup is done.
+          if [ -z "${CF_ROTATOR_TOKEN:-}" ]; then
+            echo "::warning::CF_ROTATOR_TOKEN is not set — skipping rotation. Create a durable USER token (Account → Cloudflare Pages → Edit, Zone → Cache Purge, User → API Tokens → Edit) and store it as the CF_ROTATOR_TOKEN secret to enable two-token rotation."
+            exit 0
+          fi
 
           # cf METHOD URL BEARER [DATA] — call the Cloudflare API and echo the
           # response body to STDOUT on success. On any non-2xx it surfaces
@@ -66,9 +80,9 @@ jobs:
           # `x="$(cf ...)"`, which captures STDOUT — an ::error:: on stdout would
           # be swallowed into the variable and never reach the step log. stdout
           # carries only the response body (the function's return value). Safe to
-          # print error bodies: a failed call carries no token value, CF_TOKEN
-          # lives only in the Authorization header (never a URL/body), and the
-          # minted value is ::add-mask::ed before it's ever touched.
+          # print error bodies: a failed call carries no token value, the tokens
+          # live only in Authorization headers (never a URL/body), and the minted
+          # value is ::add-mask::ed before it's ever touched.
           cf() {
             local method="$1" url="$2" bearer="$3" data="${4:-}" out code body
             if [ -n "$data" ]; then
@@ -91,28 +105,51 @@ jobs:
             printf '%s' "$body"
           }
 
-          # Normalise a token's policy set to a stable, comparable shape so we
-          # can assert the replacement grants exactly what the current one does.
-          norm='[.result.policies[] | {effect, resources, pg: ([.permission_groups[].id] | sort)}] | sort'
+          # Normalise a policy ARRAY to a stable, comparable shape so we can
+          # assert the minted token grants exactly the intended deploy policy.
+          norm='[.[] | {effect, resources, pg: ([.permission_groups[].id] | sort)}] | sort'
 
-          # The current token authenticates as itself; verify returns its own ID.
-          verify="$(cf GET "$api/user/tokens/verify" "$CF_TOKEN")" || exit 1
-          old_id="$(jq -r '.result.id' <<<"$verify")"
-          if [ -z "$old_id" ] || [ "$old_id" = "null" ]; then
-            echo "::error::Could not resolve the Cloudflare token ID. Is CLOUDFLARE_API_TOKEN a USER token (not account-owned) with 'User → API Tokens → Edit'?"
+          # 1. Identify the rotator itself so we never retire it by accident.
+          rot_verify="$(cf GET "$api/user/tokens/verify" "$CF_ROTATOR_TOKEN")" || exit 1
+          rotator_id="$(jq -r '.result.id' <<<"$rot_verify")"
+          if [ -z "$rotator_id" ] || [ "$rotator_id" = "null" ]; then
+            echo "::error::CF_ROTATOR_TOKEN did not verify. It must be a USER token (not account-owned) with 'User → API Tokens → Edit'."
             exit 1
           fi
 
-          # Read the current token's name + policies so the copy is identical.
-          detail="$(cf GET "$api/user/tokens/$old_id" "$CF_TOKEN")" || exit 1
-          name="$(jq -r '.result.name' <<<"$detail")"
-          old_norm="$(jq -cS "$norm" <<<"$detail")"
-          policies="$(jq -c '[.result.policies[] | {effect, resources, permission_groups: [.permission_groups[] | {id}]}]' <<<"$detail")"
+          # 2. Build the DEPLOY policy from the rotator's own policies, dropping
+          #    anything user-scoped (com.cloudflare.api.user.*) — that's the
+          #    'API Tokens' management permission, which Cloudflare forbids on an
+          #    API-minted token (error 1001) and which a deploy must never carry.
+          #    What remains is exactly the account/zone-scoped Pages·Edit +
+          #    Cache Purge. Deriving from the durable rotator makes run 1 == run N.
+          rot_detail="$(cf GET "$api/user/tokens/$rotator_id" "$CF_ROTATOR_TOKEN")" || exit 1
+          deploy_policies="$(jq -c '
+            [ .result.policies[]
+              | select(([.resources | keys[] | startswith("com.cloudflare.api.user.")] | any) | not)
+              | {effect, resources, permission_groups: [.permission_groups[] | {id}]} ]' <<<"$rot_detail")"
+          if [ "$(jq 'length' <<<"$deploy_policies")" -eq 0 ]; then
+            echo "::error::Rotator has no non-user-scoped policies — it needs Account → Cloudflare Pages → Edit (and Zone → Cache Purge) so it can grant them to the deploy token."
+            exit 1
+          fi
+          want_norm="$(jq -cS "$norm" <<<"$deploy_policies")"
 
-          # Create a NEW token with the same name + policies. The old token is
-          # untouched and stays valid, so deploys keep working throughout.
-          payload="$(jq -cn --arg name "$name" --argjson policies "$policies" '{name:$name, policies:$policies}')"
-          create="$(cf POST "$api/user/tokens" "$CF_TOKEN" "$payload")" || exit 1
+          # 3. Note the CURRENT deploy token's id so we can retire it in step 7.
+          #    Best-effort: if it can't be resolved (already invalid, or equal to
+          #    the rotator on first run) we simply skip cleanup — orphan hygiene,
+          #    never an outage.
+          old_deploy_id=""
+          if [ -n "${CF_DEPLOY_TOKEN:-}" ]; then
+            old_verify="$(cf GET "$api/user/tokens/verify" "$CF_DEPLOY_TOKEN" 2>/dev/null || true)"
+            old_deploy_id="$(jq -r '.result.id // empty' <<<"${old_verify:-}" 2>/dev/null || true)"
+          fi
+
+          # 4. Mint a NEW deploy-only token. No token-management perm, so
+          #    Cloudflare accepts it; the old deploy token is untouched and stays
+          #    valid, so deploys keep working throughout.
+          payload="$(jq -cn --arg name "ineil77.dev Pages deploy (auto-rotated)" \
+            --argjson policies "$deploy_policies" '{name:$name, policies:$policies}')"
+          create="$(cf POST "$api/user/tokens" "$CF_ROTATOR_TOKEN" "$payload")" || exit 1
           new_id="$(jq -r '.result.id' <<<"$create")"
           new_val="$(jq -r '.result.value' <<<"$create")"
           if [ -z "$new_val" ] || [ "$new_val" = "null" ] || [ -z "$new_id" ] || [ "$new_id" = "null" ]; then
@@ -121,33 +158,37 @@ jobs:
           fi
           echo "::add-mask::$new_val"
 
-          # GUARD: before overwriting the secret, confirm the new token (a) is a
-          # faithful copy of the old policy set and (b) actually authenticates.
-          # If either check fails, delete the orphan and bail WITHOUT touching
-          # the secret — the old token is still live, so deploys stay safe.
-          new_detail="$(cf GET "$api/user/tokens/$new_id" "$CF_TOKEN")" || exit 1
-          new_norm="$(jq -cS "$norm" <<<"$new_detail")"
+          # 5. GUARD: before overwriting the secret, confirm the new token (a)
+          #    grants exactly the intended deploy policy and (b) authenticates as
+          #    active. On any mismatch, delete the orphan and bail WITHOUT
+          #    touching the secret — the old deploy token is still live, so
+          #    deploys stay safe.
+          new_detail="$(cf GET "$api/user/tokens/$new_id" "$CF_ROTATOR_TOKEN")" || exit 1
+          new_norm="$(jq -cS '[.result.policies[] | {effect, resources, pg: ([.permission_groups[].id] | sort)}] | sort' <<<"$new_detail")"
           verify_new="$(cf GET "$api/user/tokens/verify" "$new_val")" || exit 1
           new_status="$(jq -r '.result.status' <<<"$verify_new")"
-          if [ "$new_norm" != "$old_norm" ] || [ "$new_status" != "active" ]; then
-            echo "::error::New token is not a faithful, active copy (status=$new_status); deleting it and keeping the old token."
-            echo "::group::normalized policy comparison (old vs new)"
-            echo "old: $old_norm"
-            echo "new: $new_norm"
+          if [ "$new_norm" != "$want_norm" ] || [ "$new_status" != "active" ]; then
+            echo "::error::New deploy token is not a faithful, active copy (status=$new_status); deleting it and keeping the old token."
+            echo "::group::normalized policy comparison (want vs new)"
+            echo "want: $want_norm"
+            echo "new:  $new_norm"
             echo "::endgroup::"
-            cf DELETE "$api/user/tokens/$new_id" "$CF_TOKEN" >/dev/null 2>&1 || true
+            cf DELETE "$api/user/tokens/$new_id" "$CF_ROTATOR_TOKEN" >/dev/null 2>&1 || true
             exit 1
           fi
 
-          # Persist the verified new value; the next deploy and rotation read it.
+          # 6. Persist the verified new deploy token; the next deploy reads it.
           printf '%s' "$new_val" | gh secret set CLOUDFLARE_API_TOKEN \
             --repo "${{ github.repository }}"
 
-          # Only now retire the old token, authenticating with the new one to
-          # prove it can manage tokens too. Best-effort: an orphaned old token is
-          # a hygiene issue, not an outage, so don't fail the run if it hiccups.
-          if cf DELETE "$api/user/tokens/$old_id" "$new_val" >/dev/null 2>&1; then
-            echo "Cloudflare token rotated: created $new_id, persisted, retired $old_id."
+          # 7. Retire the PREVIOUS deploy token (best-effort, via the rotator).
+          #    Never delete the rotator or the token we just minted.
+          if [ -n "$old_deploy_id" ] && [ "$old_deploy_id" != "$rotator_id" ] && [ "$old_deploy_id" != "$new_id" ]; then
+            if cf DELETE "$api/user/tokens/$old_deploy_id" "$CF_ROTATOR_TOKEN" >/dev/null 2>&1; then
+              echo "Rotated deploy token: minted $new_id, persisted, retired $old_deploy_id."
+            else
+              echo "::warning::New deploy token $new_id is live and saved, but deleting old token $old_deploy_id failed (orphaned — remove it manually in the Cloudflare dashboard)."
+            fi
           else
-            echo "::warning::New token $new_id is live and saved, but deleting old token $old_id failed (orphaned — remove it manually in the Cloudflare dashboard)."
+            echo "Rotated deploy token: minted $new_id, persisted. No prior deploy-only token to retire (first run, or old token is the rotator)."
           fi
