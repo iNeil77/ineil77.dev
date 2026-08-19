@@ -23,8 +23,6 @@ export interface ResearchThread {
 
 export const site = {
   name: "Indraneil Paul",
-  /** used in <title> and meta */
-  shortName: "Indraneil Paul",
   role: "PhD Researcher, Language Models & Code",
   location: "UKP Lab · TU Darmstadt",
   email: "indraneil.paul@gmail.com",
