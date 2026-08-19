@@ -4,6 +4,17 @@ Personal academic site for Indraneil Paul — a static [Astro](https://astro.bui
 site deployed to [Cloudflare Pages](https://pages.cloudflare.com) on the custom
 domain **[ineil77.dev](https://ineil77.dev)**.
 
+## Documentation
+
+This README is the overview and quick-start. Deeper design notes, processes, and
+recovery runbooks live in [`documentation/`](documentation/):
+
+- [`documentation/architecture.md`](documentation/architecture.md) — build
+  pipeline, CSP hardening, design language, and the CV↔website coupling contract.
+- [`documentation/operations-and-recovery.md`](documentation/operations-and-recovery.md)
+  — deploy, cache, keepalive, the full credential model, the two-token Cloudflare
+  rotation, and **disaster-recovery runbooks**.
+
 ## Stack
 
 - **Astro 7**, static output (no server runtime) — see `package.json`.
@@ -152,14 +163,8 @@ and only **then** retires the previous deploy token. The old token stays valid
 throughout, so a mid-run crash orphans a token at worst — never an outage. The
 rotator is never deleted or rotated by the job.
 
-**Rotation runbook.**
-- The **App private key** and the **`CF_ROTATOR_TOKEN`** are the only long-lived
-  credentials. Rotate the App key anytime in the App settings (add new key →
-  update `CI_APP_PRIVATE_KEY` → delete old) with zero downtime.
-- Rotate `CF_ROTATOR_TOKEN` manually (~quarterly is ample): create a new USER
-  token with the three permissions above, update the secret, delete the old one.
-  Optionally give it an `expires_on` backstop.
-- If a rotation run ever fails, the old `CLOUDFLARE_API_TOKEN` is still valid —
-  deploys keep working. Re-run the workflow (`workflow_dispatch`) once the cause
-  is fixed. Check the Cloudflare dashboard for orphaned "auto-rotated" tokens
-  and remove any the job couldn't retire.
+The **App private key** and **`CF_ROTATOR_TOKEN`** are the only long-lived
+credentials; rotate either with zero downtime. Step-by-step rotation and
+disaster-recovery procedures (broken rotation, lost rotator, wiped secrets, bad
+deploy) are in
+[`documentation/operations-and-recovery.md`](documentation/operations-and-recovery.md).
