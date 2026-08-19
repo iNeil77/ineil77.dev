@@ -57,29 +57,58 @@ jobs:
           set -euo pipefail
           api="https://api.cloudflare.com/client/v4"
 
+          # cf METHOD URL BEARER [DATA] — call the Cloudflare API and echo the
+          # response body on success. On any non-2xx it surfaces Cloudflare's
+          # actual error object (code + message) via ::error:: and returns 1, so
+          # a rejected call aborts with a diagnosable reason instead of the bare
+          # `curl: (22) ... 400` that `curl -f` leaves behind. Safe to print the
+          # error body: a failed call carries no token value, CF_TOKEN lives only
+          # in the Authorization header (never a URL/body), and the minted value
+          # is ::add-mask::ed before it's ever touched.
+          cf() {
+            local method="$1" url="$2" bearer="$3" data="${4:-}" out code body
+            if [ -n "$data" ]; then
+              out="$(curl -sS -X "$method" "$url" \
+                -H "Authorization: Bearer $bearer" \
+                -H "Content-Type: application/json" \
+                --data "$data" -w $'\n%{http_code}')" \
+                || { echo "::error::Network error calling ${url##*/client/v4}"; return 1; }
+            else
+              out="$(curl -sS -X "$method" "$url" \
+                -H "Authorization: Bearer $bearer" -w $'\n%{http_code}')" \
+                || { echo "::error::Network error calling ${url##*/client/v4}"; return 1; }
+            fi
+            code="${out##*$'\n'}"
+            body="${out%$'\n'*}"
+            if [ "${code#2}" = "$code" ]; then
+              echo "::error::Cloudflare ${method} ${url##*/client/v4} -> HTTP ${code}: $(jq -c '.errors // .messages // .' <<<"$body" 2>/dev/null || printf '%s' "$body")"
+              return 1
+            fi
+            printf '%s' "$body"
+          }
+
           # Normalise a token's policy set to a stable, comparable shape so we
           # can assert the replacement grants exactly what the current one does.
           norm='[.result.policies[] | {effect, resources, pg: ([.permission_groups[].id] | sort)}] | sort'
 
           # The current token authenticates as itself; verify returns its own ID.
-          old_id="$(curl -fsS "$api/user/tokens/verify" \
-            -H "Authorization: Bearer $CF_TOKEN" | jq -r '.result.id')"
+          verify="$(cf GET "$api/user/tokens/verify" "$CF_TOKEN")" || exit 1
+          old_id="$(jq -r '.result.id' <<<"$verify")"
           if [ -z "$old_id" ] || [ "$old_id" = "null" ]; then
-            echo "::error::Could not resolve the Cloudflare token ID. Is the token valid and does it have 'User → API Tokens → Edit'?"
+            echo "::error::Could not resolve the Cloudflare token ID. Is CLOUDFLARE_API_TOKEN a USER token (not account-owned) with 'User → API Tokens → Edit'?"
             exit 1
           fi
 
           # Read the current token's name + policies so the copy is identical.
-          detail="$(curl -fsS "$api/user/tokens/$old_id" -H "Authorization: Bearer $CF_TOKEN")"
+          detail="$(cf GET "$api/user/tokens/$old_id" "$CF_TOKEN")" || exit 1
           name="$(jq -r '.result.name' <<<"$detail")"
           old_norm="$(jq -cS "$norm" <<<"$detail")"
           policies="$(jq -c '[.result.policies[] | {effect, resources, permission_groups: [.permission_groups[] | {id}]}]' <<<"$detail")"
 
           # Create a NEW token with the same name + policies. The old token is
           # untouched and stays valid, so deploys keep working throughout.
-          create="$(curl -fsS -X POST "$api/user/tokens" \
-            -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
-            --data "$(jq -cn --arg name "$name" --argjson policies "$policies" '{name:$name, policies:$policies}')")"
+          payload="$(jq -cn --arg name "$name" --argjson policies "$policies" '{name:$name, policies:$policies}')"
+          create="$(cf POST "$api/user/tokens" "$CF_TOKEN" "$payload")" || exit 1
           new_id="$(jq -r '.result.id' <<<"$create")"
           new_val="$(jq -r '.result.value' <<<"$create")"
           if [ -z "$new_val" ] || [ "$new_val" = "null" ] || [ -z "$new_id" ] || [ "$new_id" = "null" ]; then
@@ -92,12 +121,17 @@ jobs:
           # faithful copy of the old policy set and (b) actually authenticates.
           # If either check fails, delete the orphan and bail WITHOUT touching
           # the secret — the old token is still live, so deploys stay safe.
-          new_detail="$(curl -fsS "$api/user/tokens/$new_id" -H "Authorization: Bearer $CF_TOKEN")"
+          new_detail="$(cf GET "$api/user/tokens/$new_id" "$CF_TOKEN")" || exit 1
           new_norm="$(jq -cS "$norm" <<<"$new_detail")"
-          new_status="$(curl -fsS "$api/user/tokens/verify" -H "Authorization: Bearer $new_val" | jq -r '.result.status')"
+          verify_new="$(cf GET "$api/user/tokens/verify" "$new_val")" || exit 1
+          new_status="$(jq -r '.result.status' <<<"$verify_new")"
           if [ "$new_norm" != "$old_norm" ] || [ "$new_status" != "active" ]; then
             echo "::error::New token is not a faithful, active copy (status=$new_status); deleting it and keeping the old token."
-            curl -fsS -X DELETE "$api/user/tokens/$new_id" -H "Authorization: Bearer $CF_TOKEN" >/dev/null 2>&1 || true
+            echo "::group::normalized policy comparison (old vs new)"
+            echo "old: $old_norm"
+            echo "new: $new_norm"
+            echo "::endgroup::"
+            cf DELETE "$api/user/tokens/$new_id" "$CF_TOKEN" >/dev/null 2>&1 || true
             exit 1
           fi
 
@@ -108,8 +142,7 @@ jobs:
           # Only now retire the old token, authenticating with the new one to
           # prove it can manage tokens too. Best-effort: an orphaned old token is
           # a hygiene issue, not an outage, so don't fail the run if it hiccups.
-          if curl -fsS -X DELETE "$api/user/tokens/$old_id" \
-            -H "Authorization: Bearer $new_val" >/dev/null 2>&1; then
+          if cf DELETE "$api/user/tokens/$old_id" "$new_val" >/dev/null 2>&1; then
             echo "Cloudflare token rotated: created $new_id, persisted, retired $old_id."
           else
             echo "::warning::New token $new_id is live and saved, but deleting old token $old_id failed (orphaned — remove it manually in the Cloudflare dashboard)."
