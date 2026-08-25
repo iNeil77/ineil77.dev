@@ -63,6 +63,22 @@ const jsonLd = {
     <meta name="theme-color" content="#004225" />
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
+    <!-- Apply the saved theme before first paint so there is no light→dark flash.
+         Runs inline (is:inline keeps it un-bundled and synchronous); scripts/csp-
+         hashes.mjs hashes it into the CSP at build time. Light is the default:
+         only an explicit "dark" choice flips the attribute — the OS is never read. -->
+    <script is:inline>
+      (function () {
+        try {
+          if (localStorage.getItem("theme") === "dark") {
+            document.documentElement.dataset.theme = "dark";
+            var m = document.querySelector('meta[name="theme-color"]');
+            if (m) m.setAttribute("content", "#151916");
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -74,7 +90,7 @@ const jsonLd = {
         top: -3rem;
         z-index: 100;
         background: var(--accent);
-        color: #fff;
+        color: var(--on-accent);
         font-family: var(--mono);
         font-size: 0.8rem;
         padding: 0.5rem 0.9rem;

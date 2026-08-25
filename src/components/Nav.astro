@@ -1,5 +1,6 @@
 ---
 import { site, nav } from "../data/site";
+import Icon from "./Icon.astro";
 
 interface Props {
   /** when true, section links resolve to "/#id" (used on sub-pages like /cv) */
@@ -22,6 +23,18 @@ const base = absolute ? "/" : "";
       ))}
       <a href={absolute ? "/cv" : "/cv"} class="cv-link">CV</a>
     </nav>
+
+    <button
+      type="button"
+      class="theme-toggle"
+      data-theme-toggle
+      aria-label="Switch to dark theme"
+      aria-pressed="false"
+      title="Toggle light / dark theme"
+    >
+      <span class="ico ico-moon" aria-hidden="true"><Icon name="moon" /></span>
+      <span class="ico ico-sun" aria-hidden="true"><Icon name="sun" /></span>
+    </button>
 
     <button type="button" class="cmdk" data-open-palette aria-label="Open command palette">
       <span class="cmdk-key">⌘</span><span class="cmdk-key">K</span>
@@ -62,7 +75,7 @@ const base = absolute ? "/" : "";
     font-weight: 600;
     font-size: 0.85rem;
     letter-spacing: -0.03em;
-    color: #fff;
+    color: var(--on-accent);
     background: var(--accent);
     width: 1.7rem;
     height: 1.7rem;
@@ -105,17 +118,45 @@ const base = absolute ? "/" : "";
   .links a:hover::after { transform: scaleX(1); }
   .cv-link { color: var(--accent-bright) !important; }
 
-  .cmdk {
+  /* Theme toggle — same chip treatment as the ⌘K button, sized as a square that
+     matches the brand mark (1.7rem) for a consistent nav row. Shows a moon in
+     light (→ dark) and a sun in dark (→ light); the swap is keyed off the root's
+     data-theme so it needs no per-click JS. */
+  .theme-toggle {
     display: inline-flex;
     align-items: center;
-    gap: 0.15rem;
-    font-family: var(--mono);
-    font-size: 0.75rem;
+    justify-content: center;
+    width: 1.7rem;
+    height: 1.7rem;
+    padding: 0;
     color: var(--muted);
     background: var(--bg-raised);
     border: 1px solid var(--rule-strong);
     border-radius: var(--radius);
-    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    transition: border-color 0.18s var(--ease), color 0.18s var(--ease);
+  }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .theme-toggle :global(.icon) { font-size: 0.95rem; }
+  .theme-toggle .ico { display: inline-flex; }
+  .theme-toggle .ico-sun { display: none; }
+  :global(:root[data-theme="dark"]) .theme-toggle .ico-moon { display: none; }
+  :global(:root[data-theme="dark"]) .theme-toggle .ico-sun { display: inline-flex; }
+
+  .cmdk {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.05rem;
+    width: 1.7rem;
+    height: 1.7rem;
+    padding: 0;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--bg-raised);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius);
     cursor: pointer;
     transition: border-color 0.18s var(--ease), color 0.18s var(--ease);
   }
@@ -140,4 +181,45 @@ const base = absolute ? "/" : "";
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
   }
+</script>
+
+<script>
+  // Theme toggle. The pre-paint inline script in Base.astro has already set
+  // <html data-theme> from localStorage; here we wire the buttons, keep the
+  // <meta name="theme-color"> and each toggle's a11y state in sync, and persist
+  // the choice. Light is the default (attribute simply absent). Any element with
+  // [data-theme-toggle] participates (nav button, ⌘K palette command).
+  const root = document.documentElement;
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  const toggles = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-theme-toggle]")
+  );
+
+  const apply = (theme: "light" | "dark") => {
+    if (theme === "dark") root.dataset.theme = "dark";
+    else delete root.dataset.theme;
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#151916" : "#004225");
+    toggles.forEach((b) => {
+      b.setAttribute(
+        "aria-label",
+        theme === "dark" ? "Switch to light theme" : "Switch to dark theme"
+      );
+      b.setAttribute("aria-pressed", String(theme === "dark"));
+    });
+  };
+
+  // Reconcile button state with whatever the pre-paint script decided.
+  apply(root.dataset.theme === "dark" ? "dark" : "light");
+
+  toggles.forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const next = root.dataset.theme === "dark" ? "light" : "dark";
+      try {
+        localStorage.setItem("theme", next);
+      } catch (e) {
+        /* private mode / storage disabled — theme still applies for this page */
+      }
+      apply(next);
+    })
+  );
 </script>

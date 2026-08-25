@@ -1,6 +1,6 @@
 ---
 import { Picture } from "astro:assets";
-import { site, bio, socials, status } from "../data/site";
+import { site, bio, socials, status, opportunities } from "../data/site";
 import { inline } from "../utils/text";
 import Icon from "./Icon.astro";
 import profileImg from "../assets/profile.jpg";
@@ -50,6 +50,16 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
           <p set:html={inline(para)} />
         ))}
       </div>
+
+      {opportunities.show && (
+        <aside class="availability" aria-label={opportunities.label}>
+          <p class="availability-head">
+            <span class="availability-dot" aria-hidden="true"></span>
+            {opportunities.label}
+          </p>
+          <p class="prose availability-text" set:html={inline(opportunities.text)} />
+        </aside>
+      )}
 
       <ul class="socials" aria-label="Profiles and contact">
         {heroSocials.map((s) => {
@@ -121,6 +131,55 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
   .bio { text-align: justify; }
   .bio p + p { margin-top: 1rem; }
 
+  /* "Open to opportunities" callout — a green-washed box keyed to the CV accent,
+     sitting between the bio and the profile row. Uses the same wash/accent tokens
+     as chips and badges, so it re-tints itself in dark mode. The status dot pulses
+     softly; the global reduced-motion rule stops it. */
+  .availability {
+    margin-top: 1.75rem;
+    padding: 0.95rem 1.15rem;
+    background: var(--wash);
+    border: 1px solid var(--wash-strong);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+  }
+  .availability-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--mono);
+    /* 25% larger than the other mono eyebrows (0.72rem → 0.9rem). line-height: 1
+       collapses the tall inherited line box so the dot centres on the caps rather
+       than sitting low against the extra leading. */
+    font-size: 0.9rem;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-variant-caps: all-small-caps;
+    font-synthesis: small-caps;
+    color: var(--accent);
+  }
+  .availability-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: none;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    animation: pulse 2.6s var(--ease) infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+    70% { box-shadow: 0 0 0 0.5rem color-mix(in srgb, var(--accent) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  }
+  .availability-text {
+    margin-top: 0.4rem;
+    font-size: 0.95rem;
+    color: var(--ink);
+    text-align: left;
+  }
+
   .socials {
     list-style: none;
     padding: 0;
@@ -148,6 +207,10 @@ const heroSocials = socials.filter((s) => !HIDE_IN_ROW.has(s.label));
   .social[data-brand="github"] { --brand: #24292F; }
   .social[data-brand="huggingface"] { --brand: #FF9D00; }
   .social[data-brand="linkedin"] { --brand: #0A66C2; }
+  /* Dark theme: GitHub's near-black mark and LinkedIn's deep blue disappear on
+     the dark canvas — lift them to legible tints. Scholar/HF read fine as-is. */
+  :global(:root[data-theme="dark"]) .social[data-brand="github"] { --brand: #e6edf3; }
+  :global(:root[data-theme="dark"]) .social[data-brand="linkedin"] { --brand: #4493f8; }
   /* HF mark now fills its (cropped) viewBox, so it only needs a small bump to
      stand as tall as the single-path marks. Row stays vertically centred. */
   .social :global(.icon.icon-logo) { font-size: 1.3rem; }

@@ -5,6 +5,8 @@
    ========================================================================== */
 
 :root {
+  color-scheme: light;
+
   /* Paper + ink */
   --bg: #faf9f5;          /* warm off-white (off-whiteness +20% vs #fbfaf7) */
   --bg-raised: #ffffff;   /* cards, palette */
@@ -20,6 +22,17 @@
   --accent-bright: #0a6b3d;    /* interactive text on light */
   --wash: #edf3ee;             /* faint green tint (chips, palette hover) */
   --wash-strong: #dfeae1;
+  /* Text/glyph colour that sits ON a solid --accent fill (buttons, brand mark,
+     active filter, skip link). White on the deep green in light; flips to dark
+     ink in dark mode, where --accent is a bright emerald. */
+  --on-accent: #ffffff;
+
+  /* Tinted status/award badge hues (light). Kept as tokens so the dark theme can
+     restate them without each component owning a per-theme rule. */
+  --gold-fg: #8a6a00;   --gold-bd: #e6d18f;   --gold-bg: #faf2d3;
+  --gold-bd-h: #caa945; --gold-bg-h: #f4e7b5;
+  --crimson-fg: #a4132f; --crimson-bd: #eebfc7; --crimson-bg: #fbe8eb;
+  --blue-fg: #135a9e;   --blue-bd: #bcd5f1;   --blue-bg: #e9f1fb;
 
   /* Type */
   --serif: "Newsreader Variable", ui-serif, Georgia, "Times New Roman", serif;
@@ -39,6 +52,42 @@
   --shadow: 0 1px 2px rgba(26, 26, 24, 0.04), 0 12px 40px -12px rgba(26, 26, 24, 0.18);
 
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Dark theme — a green-neutral dark grey (#151916) sitting between GitHub's brand
+   Gray 6 (#101411) and Gray 5 (#232925), deliberately NOT pure black and warmer
+   than the old bluish slate so it harmonises with the green accent.
+   Opt-in only: applied when the toggle sets <html data-theme="dark">, persisted in
+   localStorage, and NEVER inferred from the OS — light stays the default. The whole
+   site is driven by the tokens above, so overriding them here re-themes every
+   component. The accent flips from deep British green to a brighter emerald of the
+   same hue so links, rules and labels stay legible on the dark canvas; solid green
+   fills take dark ink via --on-accent. A handful of hardcoded hues that can't ride
+   a token (brand logos, the palette scrim) are handled in their own files. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #151916;
+  --bg-raised: #1d221e;
+  --ink: #e6edf3;
+  --muted: #9198a1;
+  --faint: #6e7681;
+  --rule: #21262d;
+  --rule-strong: #30363d;
+
+  --accent: #46c98d;
+  --accent-hover: #58d69c;
+  --accent-bright: #56d39a;
+  --wash: #132a1f;
+  --wash-strong: #1b3b2b;
+  --on-accent: #151916;
+
+  --shadow: 0 1px 2px rgba(1, 4, 9, 0.5), 0 16px 48px -16px rgba(1, 4, 9, 0.75);
+
+  --gold-fg: #e3b341;   --gold-bd: #493f1c;   --gold-bg: #241d10;
+  --gold-bd-h: #6b5a26; --gold-bg-h: #352b14;
+  --crimson-fg: #ff818d; --crimson-bd: #5a2230; --crimson-bg: #26141a;
+  --blue-fg: #79c0ff;   --blue-bd: #1f3b57;   --blue-bg: #10202e;
 }
 
 /* Reset ------------------------------------------------------------------- */
@@ -140,6 +189,21 @@ a.chip:hover { color: var(--accent); border-color: var(--accent); background: va
 /* Keyboard focus only */
 :focus:not(:focus-visible) { outline: none; }
 :focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 3px; border-radius: 3px; }
+
+/* Print: always render on white with dark ink, even when the dark theme is active
+   on screen — light body text on white paper would otherwise vanish. Restating the
+   tokens (not per-element rules) re-lights every component for the printout. */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #fff; --bg-raised: #fff;
+    --ink: #000; --muted: #333; --faint: #555;
+    --rule: #ccc; --rule-strong: #bbb;
+    --accent: #004225; --accent-hover: #004225; --accent-bright: #004225;
+    --wash: #fff; --wash-strong: #eee; --on-accent: #fff;
+  }
+}
 
 /* Motion ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {

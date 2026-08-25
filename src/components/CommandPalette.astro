@@ -17,6 +17,8 @@ type Cmd = {
   emoji: string;
   keywords: string;
   external?: boolean;
+  /** in-page action instead of navigation (e.g. "theme") */
+  action?: string;
 };
 
 const goTo: Cmd[] = [
@@ -37,6 +39,15 @@ const goTo: Cmd[] = [
     emoji: "\u{2B07}\u{FE0F}",
     keywords: "cv resume pdf download",
     external: true,
+  },
+  {
+    group: "Go to",
+    label: "Toggle theme",
+    hint: "Light / Dark",
+    href: "",
+    emoji: "\u{1F317}", // 🌗
+    keywords: "theme dark light mode toggle appearance color",
+    action: "theme",
   },
 ];
 
@@ -98,6 +109,7 @@ const groups = ["Go to", "Connect", "Publications"];
                 data-cmd
                 data-href={c.href}
                 data-external={c.external ? "1" : "0"}
+                data-action={c.action ?? ""}
                 data-keywords={c.keywords.toLowerCase()}
                 data-group={g}
               >
@@ -137,6 +149,8 @@ const groups = ["Go to", "Connect", "Publications"];
     backdrop-filter: blur(2px);
     animation: fade 0.16s var(--ease);
   }
+  /* A heavier, cooler scrim reads better over the dark canvas. */
+  :global(:root[data-theme="dark"]) .backdrop { background: rgba(1, 4, 9, 0.6); }
   .panel {
     position: relative;
     width: min(38rem, 100%);
@@ -293,9 +307,14 @@ const groups = ["Go to", "Connect", "Publications"];
     const toggle = () => (palette.hidden ? open() : close());
 
     const activate = (el: HTMLElement) => {
+      const action = el.dataset.action || "";
       const href = el.dataset.href || "";
       const external = el.dataset.external === "1";
       close();
+      if (action === "theme") {
+        document.querySelector<HTMLButtonElement>("[data-theme-toggle]")?.click();
+        return;
+      }
       if (!href) return;
       if (external) {
         window.open(href, "_blank", "noopener");

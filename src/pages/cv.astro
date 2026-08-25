@@ -137,8 +137,8 @@ const ICON_KINDS = new Set(["abstract", "pdf", "slides", "code", "demo", "projec
     transition: border-color 0.18s var(--ease), background 0.18s var(--ease), color 0.18s var(--ease);
   }
   .btn:hover { border-color: var(--accent); background: var(--wash); color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn.primary:hover { background: var(--accent-hover); color: #fff; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-hover); color: var(--on-accent); }
 
   .cv-name { font-size: clamp(2rem, 5vw, 2.6rem); margin-top: 1.4rem; letter-spacing: -0.02em; }
   .cv-role { font-family: var(--mono); font-size: 0.82rem; font-weight: 700; color: var(--muted); margin-top: 0.5rem; }

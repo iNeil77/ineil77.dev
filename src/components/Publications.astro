@@ -89,7 +89,7 @@ function titleHref(p: (typeof publications)[number]) {
   }
   .filter { cursor: pointer; font-weight: 500; }
   .filter[data-active] {
-    color: #fff;
+    color: var(--on-accent);
     background: var(--accent);
     border-color: var(--accent);
   }
@@ -146,14 +146,15 @@ function titleHref(p: (typeof publications)[number]) {
   }
   /* Tinted status/award boxes, keyed to the paper's standing. Each is a soft
      wash background + matching hairline + saturated text, mirroring the site's
-     green chip treatment across four hues. */
-  .badge.award { display: inline-flex; align-items: center; gap: 0.3em; color: #8a6a00; border-color: #e6d18f; background: #faf2d3; } /* Outstanding Paper → gold */
+     green chip treatment across four hues. The hues are theme tokens (see
+     global.css) so the dark theme restates them without touching this block. */
+  .badge.award { display: inline-flex; align-items: center; gap: 0.3em; color: var(--gold-fg); border-color: var(--gold-bd); background: var(--gold-bg); } /* Outstanding Paper → gold */
   a.badge.award { text-decoration: none; transition: border-color 0.18s var(--ease), background 0.18s var(--ease); }
-  a.badge.award:hover { border-color: #caa945; background: #f4e7b5; }
+  a.badge.award:hover { border-color: var(--gold-bd-h); background: var(--gold-bg-h); }
 
   .badge.status-oral { color: var(--accent); border-color: var(--wash-strong); background: var(--wash); }               /* Oral → British green */
-  .badge.status-under-review { color: #a4132f; border-color: #eebfc7; background: #fbe8eb; }                            /* Under Review → crimson */
-  .badge.status-poster { color: #135a9e; border-color: #bcd5f1; background: #e9f1fb; }                                  /* Poster → blue */
+  .badge.status-under-review { color: var(--crimson-fg); border-color: var(--crimson-bd); background: var(--crimson-bg); } /* Under Review → crimson */
+  .badge.status-poster { color: var(--blue-fg); border-color: var(--blue-bd); background: var(--blue-bg); }             /* Poster → blue */
 
   /* Resource links sit flush-right on the venue line, mirroring the CV page. */
   .pub-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-left: auto; }

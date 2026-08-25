@@ -12,14 +12,19 @@ hand-edited content and data generated from the private `Personal_CV` LaTeX repo
 | --- | --- | --- |
 | Publications (homepage + `/cv`) | `Personal_CV` `\project{}` → `src/generated/cv.json` | the CV, never here |
 | CV page timelines / experience | `Personal_CV` sections → `cv.json` | the CV, never here |
-| Name, bio, role, socials, nav, status, research threads | `src/data/site.ts` | by hand |
-| News feed | `src/data/news.ts` | by hand |
+| Name, bio, role, socials, nav, status, research threads, opportunities callout | `src/data/site.ts` | by hand |
+| News feed (hand-written items) | `src/data/news.ts` | by hand |
+| Invited talks (folded into the news feed) | `Personal_CV` `invited_talks` section → `cv.json` → `src/data/talks.ts` | the CV, never here |
 
 `src/data/publications.ts` is an **adapter** over `cv.json`, not a data file:
 it finds the `publications` section, decomposes each venue line into
 venue/year/status/award, filters links to the homepage-relevant kinds, and
-derives the filter categories. The bio and news support a `{label|href}` inline
-mini-syntax (`src/utils/text.ts`).
+derives the filter categories. `src/data/talks.ts` is a second adapter: it reads
+the CV's `invited_talks` section and normalises each `MM/YY` date to an ISO
+first-of-month, so the News component can merge the talks with the hand-written
+items — which it renders **newest-first, filtered to 2024-01 onward**. The bio,
+the opportunities callout, and news support a `{label|href}` inline mini-syntax
+(`src/utils/text.ts`).
 
 ## Build pipeline (`npm run build`)
 
@@ -75,7 +80,20 @@ document read as one identity) on warm off-white `#faf9f5`
 (body), **Source Code Pro** (mono/metadata), self-hosted and hand-subsetted to
 latin + latin-ext in `src/styles/fonts.css` (regenerate that file if a font
 package version changes). No UI framework; small vanilla-JS enhancements (⌘K
-palette, publication filter chips, nav scroll-state).
+palette, publication filter chips, light/dark theme toggle, nav scroll-state).
+
+**Theming.** Every colour is a CSS custom-property token on `:root`;
+`:root[data-theme="dark"]` overrides those tokens to re-theme the whole site, so
+components carry only one dark-specific rule each at most (a few solid-fill spots
+swap to `--on-accent`, and the GitHub/LinkedIn logo marks get lifted tints).
+Light is the **default**; dark is **opt-in** — a nav toggle (mirrored as a ⌘K
+command) persists the choice to `localStorage` and is **never** inferred from the
+OS. The dark canvas is a green-neutral `#151916` (between GitHub brand Gray 6
+`#101411` and Gray 5 `#232925`) with the accent lifted to a brighter emerald of
+the same hue. An `is:inline` pre-paint script in `Base.astro` applies the stored
+theme before first paint (no flash) and is one of the inline scripts hashed into
+the CSP; an `@media print` block forces the light palette so dark never prints
+light-on-white.
 
 > The headshot is duplicated **by hand**: `public/profile.jpg` (OG/social card)
 > and `src/assets/profile.jpg` (on-page `<Picture>`) are byte-identical. Update
@@ -103,6 +121,12 @@ they render nothing in the PDF. `researchThreads[].work` in `src/data/site.ts`
 references those ids; a thread quick-link that renders nothing is almost always
 an **id mismatch** with the CV, not a component bug. Values must contain **no
 nested braces** (the parser uses a single-level brace-pair regex).
+
+**Invited talks**: `src/data/talks.ts` keys off the CV section whose `id` is
+`invited_talks` and expects `MM/YY` entry dates and `Title, Venue` headings
+(split on the **last** comma). Renaming that section id, or drifting from the
+`MM/YY` date format, silently empties the talks from the news feed rather than
+erroring.
 
 **Trust boundary**: the parser treats the CV as trusted, author-controlled input.
 It HTML-escapes text and emits a fixed tag whitelist, but does **not** sanitize

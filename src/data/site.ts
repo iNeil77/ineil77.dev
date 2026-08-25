@@ -64,9 +64,9 @@ export const socials: SocialLink[] = [
 // Prose bio. Each string is a paragraph. Inline links use the {label|href}
 // mini-syntax expanded by the Hero component.
 export const bio: string[] = [
-  "I'm a PhD researcher at the {UKP Lab|https://www.informatik.tu-darmstadt.de/ukp}, **TU Darmstadt**, advised by {Iryna Gurevych|https://www.informatik.tu-darmstadt.de/ukp/ukp_home/head_ukp/index.en.jsp} and {Goran Glavaš|https://sites.google.com/view/goranglavas}. I work on the **mid- and post-training** of language models, with an emphasis on **agentic coding and tool use**.",
-  "My longer-term aim is to extend LMs to **long-horizon operation** — computer use, recursive workflows — by improving how they reason, offload computation, and learn from environment feedback. Alongside this, I study **preference learning and verifiers** that push code models along non-functional axes like **security and efficiency**, and I care about the whole pre-training stack: data curation, context-length extension, modularity, and reinforcement learning.",
-  "Previously I was an **Applied Scientist** at Amazon, and before that a dual-degree student at {IIIT Hyderabad|https://iiit.ac.in}. I've contributed to several open code-LM releases, including {StarCoder2|https://huggingface.co/blog/starcoder2} and {BigCodeBench|https://bigcode-bench.github.io}.",
+  "I'm a PhD researcher at the {UKP Lab|https://www.informatik.tu-darmstadt.de/ukp}, **TU Darmstadt**, advised by {Iryna Gurevych|https://www.informatik.tu-darmstadt.de/ukp/ukp_home/head_ukp/index.en.jsp} and {Goran Glavaš|https://sites.google.com/view/goranglavas}. I work on the **mid- and post-training** of language models, with an emphasis on **reasoning**, **agentic coding**, and **tool use**. Lately, I have been exploring the role of **mid-training** in instilling deeper **alignment** and **world modeling** capabilities in LMs.",
+  "My longer-term aim is to extend LMs' capabilities in **long-horizon operation** by improving how they reason, offload computation, and learn from environment or agent feedback. To this end, I also study **scalable supervision via verifiers** that improve models along **hard-to-verify** axes like **security and efficiency**.",
+  "Previously I was an **Applied Scientist** at Amazon, and before that a dual-degree student at {IIIT Hyderabad|https://iiit.ac.in}. I've contributed to several open LM training and evaluation releases, including {StarCoder2|https://huggingface.co/blog/starcoder2} and {BigCodeBench|https://bigcode-bench.github.io}.",
 ];
 
 // Location shown under the profile photo.
@@ -75,26 +75,36 @@ export const status = {
   emoji: "\u{1F4CD}", // 📍
 };
 
+// "Open to opportunities" callout rendered at the end of the hero bio. Set
+// `show` to false to hide it. `text` uses the same {label|href} / **bold**
+// mini-syntax as the bio paragraphs above.
+export const opportunities = {
+  show: true,
+  label: "Open to opportunities",
+  text:
+    "I'm on the lookout for **full-time research positions** — research and applied scientist roles in language modeling, agentic coding, and post-training. If you're hiring or exploring a collaboration, let's talk!",
+} as const;
+
 export const researchThreads: ResearchThread[] = [
   {
     no: "01",
-    title: "Agentic coding & tool use",
+    title: "Code LMs & tool use",
     blurb:
-      "Teaching code models to operate over long horizons — calling tools, offloading computation, and learning from execution and environment feedback rather than static text alone.",
+      "Developing and evaluating capable code models and extending them for long-horizon operation — tool use and learning from environment feedback. This spans the mid-training that stretches models beyond repository-scale context, and the pre-training corpora and benchmarks that ground everyday tool use.",
     work: ["octolong", "bigcodebench", "starcoder2"],
   },
   {
     no: "02",
-    title: "Verifiers & preference learning",
+    title: "Verifiers & scalable supervision",
     blurb:
-      "What actually makes RLVR and reward models work for code, and how to score generations along non-functional axes — correctness, security, efficiency — across languages and criteria.",
+      "Building the scalable supervision that post-training leans on — pinning down what actually makes RLVR and code verifiers effective, and training reward models that score generations along hard-to-verify axes like security and efficiency, across languages and criteria.",
     work: ["aletheia", "themis"],
   },
   {
     no: "03",
     title: "Pre-training efficiency & grounding",
     blurb:
-      "Getting more out of code-LM pre-training through obfuscation and intermediate-representation grounding, multilingual transfer, and modular / parameter-efficient methods.",
+      "The pre-training foundation the rest builds on — getting more out of code-LM training by grounding models in code obfuscation and compiler intermediate representations, strengthening multilingual transfer, and keeping adaptation modular and parameter-efficient.",
     work: ["obscuracoder", "ircoder", "adapters"],
   },
 ];

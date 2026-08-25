@@ -24,7 +24,12 @@ recovery runbooks live in [`documentation/`](documentation/):
   (`#004225`) is lifted straight from the LaTeX CV so the site and the document
   read as one identity (`src/styles/global.css`).
 - No UI framework; a little vanilla JS powers the ⌘K command palette, the
-  publication filter chips, and the nav scroll-state.
+  publication filter chips, the light/dark theme toggle, and the nav scroll-state.
+- **Light + dark themes**, both driven by the CSS custom-property tokens in
+  `src/styles/global.css`. Light is the default; dark is an **opt-in toggle**
+  (persisted in `localStorage`, never inferred from the OS) that flips the accent
+  to a brighter emerald on a GitHub-style green-neutral dark canvas. See
+  `documentation/architecture.md` for the token/FOUC/CSP details.
 
 ## Content lives in data files
 
@@ -32,12 +37,15 @@ Edit these — every section reads from them; no component markup changes needed
 
 | File | Drives |
 | --- | --- |
-| `src/data/site.ts` | Name, role, bio, socials, nav, status, research threads |
-| `src/data/news.ts` | News feed |
+| `src/data/site.ts` | Name, role, bio, socials, nav, status, research threads, "open to opportunities" callout |
+| `src/data/news.ts` | News feed (hand-written items) |
+| `src/data/talks.ts` | **Adapter only** — invited talks from the CV, folded into the news feed; not hand-edited |
 | `src/data/publications.ts` | **Adapter only** — derives the homepage list from the CV; not hand-edited |
 
-The bio and news support a `{label|href}` inline-link mini-syntax
-(`src/utils/text.ts`).
+The bio, the opportunities callout, and news support a `{label|href}`
+inline-link mini-syntax (`src/utils/text.ts`). The news feed merges the
+hand-written items with the CV's invited talks and shows only items dated
+2024-01 onward, newest first.
 
 > **Publications are NOT edited here.** They come from the CV (see below).
 > `src/data/publications.ts` is a thin adapter over the generated `cv.json`.

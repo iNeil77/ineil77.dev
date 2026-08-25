@@ -1,6 +1,28 @@
 ---
 import { news } from "../data/news";
+import { talks } from "../data/talks";
 import { inline, monthYear } from "../utils/text";
+
+// The feed shows items from January 2024 onwards only.
+const SINCE = "2024-01-01";
+
+// Strip the mini-syntax's structural characters from CV-sourced strings so a
+// stray brace/pipe can't break the {label|href} expansion below.
+const clean = (s: string) => s.replace(/[{}|]/g, "").trim();
+
+// Fold the CV's invited talks into the feed as prose items, phrased with the
+// same {label|href} mini-syntax the hand-written news uses (linked title when a
+// slides URL exists). These merge and sort in with the manual updates.
+const talkItems = talks.map((t) => {
+  const title = clean(t.title);
+  const linked = t.slides ? `{${title}|${t.slides}}` : `“${title}”`;
+  const where = t.venue ? ` at ${clean(t.venue)}` : "";
+  return { date: t.date, text: `**Invited talk** — ${linked}${where}.` };
+});
+
+const feed = [...news, ...talkItems]
+  .filter((item) => item.date >= SINCE)
+  .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 ---
 
 <section id="news" class="section" aria-label="News">
@@ -8,7 +30,7 @@ import { inline, monthYear } from "../utils/text";
     <p class="eyebrow"><span class="em">📰</span>News And Updates</p>
 
     <ol class="feed">
-      {news.map((item) => (
+      {feed.map((item) => (
         <li class="item">
           <time class="date mono" datetime={item.date}>{monthYear(item.date)}</time>
           <p class="prose text" set:html={inline(item.text)} />
