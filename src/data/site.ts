@@ -79,7 +79,7 @@ export const status = {
 // `show` to false to hide it. `text` uses the same {label|href} / **bold**
 // mini-syntax as the bio paragraphs above.
 export const opportunities = {
-  show: true,
+  show: false,
   label: "Open to opportunities",
   text:
     "I'm on the lookout for **full-time research positions** — research and applied scientist roles in language modeling, agentic coding, and post-training. If you're hiring or exploring a collaboration, let's talk!",
@@ -90,21 +90,21 @@ export const researchThreads: ResearchThread[] = [
     no: "01",
     title: "Code LMs & tool use",
     blurb:
-      "Developing and evaluating capable code models and extending them for long-horizon operation — tool use and learning from environment feedback. This spans the mid-training that stretches models beyond repository-scale context, and the pre-training corpora and benchmarks that ground everyday tool use.",
+      "Developing and evaluating capable code models and extending them for long-horizon operation, including tool use and learning from environment feedback. This spans the mid-training that stretches models beyond repository-scale context, and the pre-training corpora and benchmarks that ground everyday tool use.",
     work: ["octolong", "bigcodebench", "starcoder2"],
   },
   {
     no: "02",
     title: "Verifiers & scalable supervision",
     blurb:
-      "Building the scalable supervision that post-training leans on — pinning down what actually makes RLVR and code verifiers effective, and training reward models that score generations along hard-to-verify axes like security and efficiency, across languages and criteria.",
+      "Building the scalable supervision that post-training leans on, by pinning down what actually makes RLVR and code verifiers effective, and by training reward models that score generations along hard-to-verify axes like security and efficiency, across languages and criteria.",
     work: ["aletheia", "themis"],
   },
   {
     no: "03",
     title: "Pre-training efficiency & grounding",
     blurb:
-      "The pre-training foundation the rest builds on — getting more out of code-LM training by grounding models in code obfuscation and compiler intermediate representations, strengthening multilingual transfer, and keeping adaptation modular and parameter-efficient.",
+      "The pre-training foundation the rest builds on. This means getting more out of code-LM training by grounding models in code obfuscation and compiler intermediate representations, strengthening multilingual transfer, and keeping adaptation modular and parameter-efficient.",
     work: ["obscuracoder", "ircoder", "adapters"],
   },
 ];
