@@ -23,11 +23,11 @@ export interface ResearchThread {
 
 export const site = {
   name: "Indraneil Paul",
-  role: "PhD Researcher, Language Models & Code",
+  role: "ELLIS PhD, Language Models & Code",
   location: "UKP Lab · TU Darmstadt",
   email: "indraneil.paul@gmail.com",
   description:
-    "Indraneil Paul is a PhD researcher at the UKP Lab, TU Darmstadt, working on mid- and post-training of language models for agentic coding, tool use, and verifiable reward.",
+    "Indraneil Paul is an ELLIS PhD working on mid- and post-training of language models for agentic coding, tool use, and verifiable reward, based at the UKP Lab, TU Darmstadt.",
   url: "https://ineil77.dev",
 } as const;
 
@@ -64,7 +64,7 @@ export const socials: SocialLink[] = [
 // Prose bio. Each string is a paragraph. Inline links use the {label|href}
 // mini-syntax expanded by the Hero component.
 export const bio: string[] = [
-  "I'm a PhD researcher at the {UKP Lab|https://www.informatik.tu-darmstadt.de/ukp}, **TU Darmstadt**, advised by {Goran Glavaš|https://sites.google.com/view/goranglavas} and {Iryna Gurevych|https://www.informatik.tu-darmstadt.de/ukp/ukp_home/head_ukp/index.en.jsp}. I work on the **mid- and post-training** of language models, with an emphasis on **reasoning**, **agentic coding**, and **tool use**. Lately, I have been exploring the role of **mid-training** in instilling deeper **alignment** and **world modeling** capabilities in LMs.",
+  "I'm an **ELLIS PhD**, advised by {Goran Glavaš|https://sites.google.com/view/goranglavas} and {Iryna Gurevych|https://www.informatik.tu-darmstadt.de/ukp/ukp_home/head_ukp/index.en.jsp}, and based at the {UKP Lab|https://www.informatik.tu-darmstadt.de/ukp}, **TU Darmstadt**. I work on the **mid- and post-training** of language models, with an emphasis on **reasoning**, **agentic coding**, and **tool use**. Lately, I have been exploring the role of **mid-training** in instilling deeper **alignment** and **world modeling** capabilities in LMs.",
   "My longer-term aim is to extend LMs' capabilities in **long-horizon operation** by improving how they reason, offload computation, and learn from environment or agent feedback. To this end, I also study **scalable supervision via verifiers** that improve models along **hard-to-verify** axes like **security and efficiency**.",
   "Previously I was an **Applied Scientist** at Amazon, and before that a dual-degree student at {IIIT Hyderabad|https://iiit.ac.in}. I've contributed to several open LM training and evaluation releases, including {StarCoder2|https://huggingface.co/blog/starcoder2} and {BigCodeBench|https://bigcode-bench.github.io}.",
 ];
